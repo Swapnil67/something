@@ -26,7 +26,7 @@ T *sdl(T *ptr) {
   return ptr;
 } 
 
-constexpr int TILE_SIZE = 16;
+constexpr int TILE_SIZE = 64;
 
 enum class Tile {
   Empty = 0,
@@ -37,12 +37,28 @@ constexpr int LEVEL_WIDTH = 5;
 constexpr int LEVEL_HEIGHT = 5;
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
-    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
-    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Wall},
+    {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Wall, Tile::Wall, Tile::Wall, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty}};
 
-void render_level(SDL_Renderer *renderer) {
+struct Tile_Texture
+{
+  SDL_Rect srcrect;
+  SDL_Texture *texture;
+};
+
+void render_tile_texture(SDL_Renderer *renderer, Tile_Texture texture, int x, int y) {
+  SDL_Rect destrect = {x, y, TILE_SIZE, TILE_SIZE};
+  sdl(SDL_RenderCopy(renderer,
+                     texture.texture,
+                     &texture.srcrect,
+                     &destrect));
+}
+
+void
+render_level(SDL_Renderer *renderer, Tile_Texture wall_texture)
+{
   for (int y = 0; y < LEVEL_HEIGHT; ++y) {
     for (int x = 0; x < LEVEL_WIDTH; ++x) {
       switch(level[y][x]) {
@@ -51,8 +67,7 @@ void render_level(SDL_Renderer *renderer) {
         } break;
         case Tile::Wall: {
           sdl(SDL_SetRenderDrawColor(renderer, 255, 100, 100, 255));
-          SDL_Rect rect = {x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE};
-          sdl(SDL_RenderFillRect(renderer, &rect));
+          render_tile_texture(renderer, wall_texture, x * TILE_SIZE, y * TILE_SIZE);
         }
       }
     }
@@ -97,6 +112,10 @@ int main() {
 
   SDL_Texture *tileset_texture = sdl(SDL_CreateTextureFromSurface(renderer, tileset_surface));
 
+  Tile_Texture wall_texture = {
+    .srcrect = {120, 128, 16, 16},
+    .texture = tileset_texture
+  };
 
   bool quit = false;
   while (!quit) {
@@ -113,12 +132,12 @@ int main() {
     sdl(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     sdl(SDL_RenderClear(renderer));
 
-    sdl(SDL_RenderCopy(renderer,
-                       tileset_texture,
-                       &tileset_surface->clip_rect,
-                       &tileset_surface->clip_rect));
+    // sdl(SDL_RenderCopy(renderer,
+    //                    tileset_texture,
+    //                    &tileset_surface->clip_rect,
+    //                    &tileset_surface->clip_rect));
 
-    // render_level(renderer);
+    render_level(renderer, wall_texture);
 
     SDL_RenderPresent(renderer);
   }
