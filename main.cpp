@@ -42,11 +42,12 @@ struct Sprite {
   SDL_Texture *texture;
 };
 
-void render_sprite(SDL_Renderer *renderer, Sprite texture, SDL_Rect destrect) {
-  sec(SDL_RenderCopy(renderer,
-                     texture.texture,
-                     &texture.srcrect,
-                     &destrect));
+void render_sprite(SDL_Renderer *renderer, Sprite texture, SDL_Rect destrect, SDL_RendererFlip flip = SDL_FLIP_NONE)
+{
+  sec(SDL_RenderCopyEx(renderer,
+                       texture.texture,
+                       &texture.srcrect,
+                       &destrect, 0.0, nullptr, flip));
 }
 
 void render_level(SDL_Renderer *renderer, Sprite wall_texture) {
@@ -108,8 +109,8 @@ struct Animation {
 };
 
 static inline
-void render_animation(SDL_Renderer *renderer, Animation animation, SDL_Rect dstrect) {
-  render_sprite(renderer, animation.frames[animation.frame_current % animation.frame_count], dstrect);
+void render_animation(SDL_Renderer *renderer, Animation animation, SDL_Rect dstrect, SDL_RendererFlip flip = SDL_FLIP_NONE) {
+  render_sprite(renderer, animation.frames[animation.frame_current % animation.frame_count], dstrect, flip);
 }
 
 void update_animation(Animation *animation, float dt) {
@@ -158,19 +159,20 @@ int main() {
   Animation walking = {};
   walking.frames = walking_frames;
   walking.frame_count = 4;
-  walking.frame_duration = 200;
+  walking.frame_duration = 150;
   
   // * Idle Animation
   Animation idle = {};
   idle.frames = walking_frames + 2; // * Pointer Arithmentic
   idle.frame_count = 1;
-  idle.frame_duration = 200;
+  idle.frame_duration = 100;
 
   Animation *current = &idle;
 
   int x = 0;
   bool quit = false;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
+  SDL_RendererFlip player_dir = SDL_FLIP_NONE; 
   while (!quit) {
     const Uint32 begin = SDL_GetTicks();
     SDL_Event event;
@@ -183,12 +185,15 @@ int main() {
       }
     }
 
+  const int PLAYER_SPEED = 2;
     if(keyboard[SDL_SCANCODE_D]) {
-      x += 1;
+      x += PLAYER_SPEED;
       current = &walking;
+      player_dir = SDL_FLIP_NONE;
     } else if(keyboard[SDL_SCANCODE_A]) {
-      x -= 1;
+      x -= PLAYER_SPEED;
       current = &walking;
+      player_dir = SDL_FLIP_HORIZONTAL;
     } else {
       current = &idle;
     }
@@ -198,7 +203,7 @@ int main() {
 
     render_level(renderer, wall_texture);
     SDL_Rect destrect = {x, 4 * TILE_SIZE - walking_frame_size, walking_frame_size, walking_frame_size};
-    render_animation(renderer, *current, destrect);
+    render_animation(renderer, *current, destrect, player_dir);
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
