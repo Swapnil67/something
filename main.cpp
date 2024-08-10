@@ -199,9 +199,10 @@ int main() {
 
   int ddy = 1; // * gravity
   bool quit = false;
-
+  bool debug = false;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
   SDL_RendererFlip player_dir = SDL_FLIP_NONE; 
+
   while (!quit) {
     const Uint32 begin = SDL_GetTicks();
     SDL_Event event;
@@ -214,6 +215,9 @@ int main() {
           switch (event.key.keysym.sym) {
             case SDLK_SPACE: {
               player.dy = -10;
+            } break;
+            case SDLK_q: {
+              debug = !debug;
             } break;
           }
         } break;
@@ -243,6 +247,12 @@ int main() {
     render_level(renderer, wall_texture);
     SDL_Rect dstrect = player.hitbox;
     render_animation(renderer, *current, dstrect, player_dir);
+
+    if(debug) {
+      sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
+      sec(SDL_RenderDrawRect(renderer, &player.hitbox));
+    }
+
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
