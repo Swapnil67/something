@@ -125,7 +125,7 @@ int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
 
   // * Create a SDL window
-  SDL_Window *window = sec(SDL_CreateWindow("Some Game", 0, 0, 800, 600, SDL_WINDOW_RESIZABLE));
+  SDL_Window *window = sec(SDL_CreateWindow("Something", 0, 0, 800, 600, SDL_WINDOW_RESIZABLE));
 
   // * Create a SDL renderer
   SDL_Renderer *renderer = sec(SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED));
