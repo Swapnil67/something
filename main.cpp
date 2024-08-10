@@ -9,7 +9,7 @@ T max(T a, T b) {
   return a > b ? a : b;
 }
 
-int sdl(int code) {
+int sec(int code) {
   if(code < 0) {
     fprintf(stderr, "SDL popped itself: %s\n", SDL_GetError());
     abort();
@@ -18,7 +18,7 @@ int sdl(int code) {
 }
 
 template <typename T>
-T *sdl(T *ptr) {
+T *sec(T *ptr) {
   if(ptr == nullptr) {
     fprintf(stderr, "SDL popped itself: %s\n", SDL_GetError());
     abort(); 
@@ -42,22 +42,19 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall}};
 
-struct Sprite
-{
+struct Sprite {
   SDL_Rect srcrect;
   SDL_Texture *texture;
 };
 
 void render_sprite(SDL_Renderer *renderer, Sprite texture, SDL_Rect destrect) {
-  sdl(SDL_RenderCopy(renderer,
+  sec(SDL_RenderCopy(renderer,
                      texture.texture,
                      &texture.srcrect,
                      &destrect));
 }
 
-void
-render_level(SDL_Renderer *renderer, Sprite wall_texture)
-{
+void render_level(SDL_Renderer *renderer, Sprite wall_texture) {
   for (int y = 0; y < LEVEL_HEIGHT; ++y) {
     for (int x = 0; x < LEVEL_WIDTH; ++x) {
       switch(level[y][x]) {
@@ -65,7 +62,7 @@ render_level(SDL_Renderer *renderer, Sprite wall_texture)
            
         } break;
         case Tile::Wall: {
-          sdl(SDL_SetRenderDrawColor(renderer, 255, 100, 100, 255));
+          sec(SDL_SetRenderDrawColor(renderer, 255, 100, 100, 255));
           SDL_Rect destrect = {x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE};
           render_sprite(renderer, wall_texture, destrect);
         }
@@ -92,7 +89,7 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
     abort();
   }
 
-  SDL_Surface *image_surface = sdl(SDL_CreateRGBSurfaceFrom(image_pixels,
+  SDL_Surface *image_surface = sec(SDL_CreateRGBSurfaceFrom(image_pixels,
                                                               image.width,
                                                               image.height,
                                                               32,
@@ -102,19 +99,41 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
                                                               0x00ff0000,
                                                               0xff000000));
 
-  SDL_Texture *image_texture = sdl(SDL_CreateTextureFromSurface(renderer, image_surface));
+  SDL_Texture *image_texture = sec(SDL_CreateTextureFromSurface(renderer, image_surface));
   SDL_FreeSurface(image_surface);
   return image_texture;
 }
 
+struct Animation {
+  Sprite *frames;
+  size_t   frame_count;
+  size_t   frame_current;
+  uint32_t frame_duration;
+  uint32_t frame_cooldown;
+};
+
+static inline
+void render_animation(SDL_Renderer *renderer, Animation animation, SDL_Rect dstrect) {
+  render_sprite(renderer, animation.frames[animation.frame_current % animation.frame_count], dstrect);
+}
+
+void update_animation(Animation *animation, float dt) {
+    if(dt < animation->frame_cooldown) {
+      animation->frame_cooldown -= dt;
+    } else {
+      animation->frame_current = (animation->frame_current + 1) % animation->frame_count;
+      animation->frame_cooldown = animation->frame_duration;
+    }
+}
+
 int main() {
-  sdl(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS));
+  sec(SDL_Init(SDL_INIT_VIDEO));
 
   // * Create a SDL window
-  SDL_Window *window = sdl(SDL_CreateWindow("Some Game", 0, 0, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE));
+  SDL_Window *window = sec(SDL_CreateWindow("Some Game", 0, 0, 800, 600, SDL_WINDOW_RESIZABLE));
 
   // * Create a SDL renderer
-  SDL_Renderer *renderer = sdl(SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED));
+  SDL_Renderer *renderer = sec(SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED));
 
   // * Get tile texture from png
   SDL_Texture *tileset_texture = load_texture_from_png_file(renderer, "fantasy_tiles.png");
@@ -124,24 +143,35 @@ int main() {
     .texture = tileset_texture
   };
 
+  // * Get the walking texture from png
   SDL_Texture *walking_texture = load_texture_from_png_file(renderer, "walking-12px.png");
 
   constexpr int walking_frame_size = 48;
   constexpr int walking_frame_count = 4;
-  constexpr int walking_frame_duration = 200;
-  int walking_frame_current = 0;
   Sprite walking_frames[walking_frame_count];
 
   for (int i = 0; i < walking_frame_count; ++i) {
     walking_frames[i].srcrect = {
-        .x = i * walking_frame_size,
-        .y = 0,
-        .w = walking_frame_size,
-        .h = walking_frame_size};
+        i * walking_frame_size,
+        0,
+        walking_frame_size,
+        walking_frame_size};
     walking_frames[i].texture = walking_texture;
   }
 
-  Uint32 walking_frame_cooldown = walking_frame_duration;
+  // * Walking Animation
+  Animation walking = {};
+  walking.frames = walking_frames;
+  walking.frame_count = 4;
+  walking.frame_duration = 200;
+  
+  // * Idle Animation
+  Animation idle = {};
+  idle.frames = walking_frames + 2; // * Pointer Arithmentic
+  idle.frame_count = 1;
+  idle.frame_duration = 200;
+
+  Animation *current = &idle;
 
   int x = 0;
   bool quit = false;
@@ -160,28 +190,25 @@ int main() {
 
     if(keyboard[SDL_SCANCODE_D]) {
       x += 1;
-    }
-    else if(keyboard[SDL_SCANCODE_A]) {
+      current = &walking;
+    } else if(keyboard[SDL_SCANCODE_A]) {
       x -= 1;
+      current = &walking;
+    } else {
+      current = &idle;
     }
-    sdl(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
-    sdl(SDL_RenderClear(renderer));
+
+    sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
+    sec(SDL_RenderClear(renderer));
 
     render_level(renderer, wall_texture);
     SDL_Rect destrect = {x, 4 * TILE_SIZE - walking_frame_size, walking_frame_size, walking_frame_size};
-    render_sprite(renderer, walking_frames[walking_frame_current], destrect);
-    SDL_RenderPresent(renderer);  
+    render_animation(renderer, *current, destrect);
+    SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
-    if(dt < walking_frame_cooldown) {
-      walking_frame_cooldown -= dt;
-    }
-    else {
-      walking_frame_current = (walking_frame_current + 1) % walking_frame_count;
-      walking_frame_cooldown = walking_frame_duration;
-    }
+    update_animation(current, dt);
   }
-
   SDL_Quit();
   return 0;
 }
