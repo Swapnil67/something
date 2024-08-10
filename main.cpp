@@ -4,11 +4,6 @@
 
 #include<SDL.h>
 
-template <typename T>
-T max(T a, T b) {
-  return a > b ? a : b;
-}
-
 int sec(int code) {
   if(code < 0) {
     fprintf(stderr, "SDL popped itself: %s\n", SDL_GetError());
