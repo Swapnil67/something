@@ -1,5 +1,5 @@
 PKGS=sdl2 libpng
-CFLAGS=-Wall -Wextra -ggdb -std=c++11 `pkg-config --cflags $(PKGS)`
+CFLAGS=-Wall -Wextra -pedantic -ggdb -std=c++17 `pkg-config --cflags $(PKGS)`
 LIBS=`pkg-config --libs $(PKGS)` -lm
 
 something: main.cpp

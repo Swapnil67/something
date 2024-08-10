@@ -1,5 +1,8 @@
+#include<cassert>
 #include<cstdio>
 #include<cstdlib>
+#include<algorithm>
+
 #include<png.h>
 
 #include<SDL.h>
@@ -35,7 +38,7 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
-    {Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall}};
+    {Tile::Wall, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall}};
 
 struct Sprite {
   SDL_Rect srcrect;
@@ -113,7 +116,7 @@ void render_animation(SDL_Renderer *renderer, Animation animation, SDL_Rect dstr
   render_sprite(renderer, animation.frames[animation.frame_current % animation.frame_count], dstrect, flip);
 }
 
-void update_animation(Animation *animation, float dt) {
+void update_animation(Animation *animation, uint32_t dt) {
     if(dt < animation->frame_cooldown) {
       animation->frame_cooldown -= dt;
     } else {
@@ -121,6 +124,28 @@ void update_animation(Animation *animation, float dt) {
       animation->frame_cooldown = animation->frame_duration;
     }
 }
+
+struct Player {
+  int dy;
+  SDL_Rect hitbox;
+};
+
+void resolve_player_collision(Player *player) {
+  assert(player);
+  int x0 = std::clamp(player->hitbox.x / TILE_SIZE, 0, LEVEL_WIDTH - 1);
+  int x1 = std::clamp((player->hitbox.x + player->hitbox.w) / TILE_SIZE, 0, LEVEL_WIDTH - 1);
+
+  int y = std::clamp((player->hitbox.y + player->hitbox.h) / TILE_SIZE, 0, LEVEL_HEIGHT - 1);
+
+  assert(x0 <= x1);
+  for (int x = x0; x <= x1; ++x) {
+    if(level[y][x] == Tile::Wall) {
+      player->dy = 0;
+      player->hitbox.y = y * TILE_SIZE - player->hitbox.h;
+      return;
+    }
+  }
+} 
 
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
@@ -166,11 +191,15 @@ int main() {
   idle.frames = walking_frames + 2; // * Pointer Arithmentic
   idle.frame_count = 1;
   idle.frame_duration = 100;
-
   Animation *current = &idle;
 
-  int x = 0;
+  Player player = {};
+  player.dy = 0;
+  player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
+
+  int ddy = 1; // * gravity
   bool quit = false;
+
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
   SDL_RendererFlip player_dir = SDL_FLIP_NONE; 
   while (!quit) {
@@ -180,30 +209,40 @@ int main() {
       switch (event.type) {
         case SDL_QUIT: {
           quit = true;
-        }
-        break;
+        } break;
+        case SDL_KEYDOWN: {
+          switch (event.key.keysym.sym) {
+            case SDLK_SPACE: {
+              player.dy = -10;
+            } break;
+          }
+        } break;
       }
     }
 
-  const int PLAYER_SPEED = 2;
+  const int PLAYER_SPEED = 4;
     if(keyboard[SDL_SCANCODE_D]) {
-      x += PLAYER_SPEED;
+      player.hitbox.x += PLAYER_SPEED;
       current = &walking;
       player_dir = SDL_FLIP_NONE;
     } else if(keyboard[SDL_SCANCODE_A]) {
-      x -= PLAYER_SPEED;
+      player.hitbox.x -= PLAYER_SPEED;
       current = &walking;
       player_dir = SDL_FLIP_HORIZONTAL;
     } else {
       current = &idle;
     }
 
+    player.dy += ddy;
+    player.hitbox.y += player.dy;
+    resolve_player_collision(&player);
+
     sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     sec(SDL_RenderClear(renderer));
 
     render_level(renderer, wall_texture);
-    SDL_Rect destrect = {x, 4 * TILE_SIZE - walking_frame_size, walking_frame_size, walking_frame_size};
-    render_animation(renderer, *current, destrect, player_dir);
+    SDL_Rect dstrect = player.hitbox;
+    render_animation(renderer, *current, dstrect, player_dir);
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
