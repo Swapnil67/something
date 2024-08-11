@@ -1,10 +1,10 @@
 #include<cassert>
 #include<cstdio>
 #include<cstdlib>
+
 #include<algorithm>
 
 #include<png.h>
-
 #include<SDL.h>
 
 int sec(int code) {
@@ -82,7 +82,8 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
   }
   image.format = PNG_FORMAT_RGBA;
   // printf("Width: %d, Height %d\n", image.width, image.height);
-  uint32_t *image_pixels = (uint32_t *) std::malloc(sizeof(uint32_t) * image.width * image.height);
+  // uint32_t *image_pixels = (uint32_t *) std::malloc(sizeof(uint32_t) * image.width * image.height);
+  uint32_t *image_pixels = new uint32_t[image.width * image.height];
   if(!png_image_finish_read(&image, nullptr, image_pixels, 0, nullptr)) {
     fprintf(stderr, "libpng pooped itself: %s\n", image.message);
     abort();
@@ -191,8 +192,8 @@ int main() {
   idle.frames = walking_frames + 2; // * Pointer Arithmentic
   idle.frame_count = 1;
   idle.frame_duration = 100;
-  Animation *current = &idle;
 
+  // * Player
   Player player = {};
   player.dy = 0;
   player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
@@ -200,6 +201,7 @@ int main() {
   int ddy = 1; // * gravity
   bool quit = false;
   bool debug = false;
+  Animation *current = &idle;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
   SDL_RendererFlip player_dir = SDL_FLIP_NONE; 
 
@@ -256,6 +258,7 @@ int main() {
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
+    printf("%d\n", dt);
     update_animation(current, dt);
   }
   SDL_Quit();
