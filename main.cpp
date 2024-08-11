@@ -141,6 +141,13 @@ bool is_tile_empty(int x, int y) {
   return !is_not_oob(x, y) || level[y][x] == Tile::Empty;
 }
 
+static inline
+int sqr_dist(int x0, int y0, int x1, int y1) {
+  int dx = x0 - x1;
+  int dy = y0 - y1;
+  return dx * dx + dy * dy;
+}
+
 void resolve_point_collision(int *x, int *y) {
   assert(x);
   assert(y);
@@ -175,23 +182,19 @@ void resolve_point_collision(int *x, int *y) {
 
   // * distance x and y
   Side sides[] = {
-      {std::abs(x0 - *x), x0, *y, -1, 0, TILE_SIZE * TILE_SIZE}, // * Left side
-      {std::abs(x1 - *x), x1, *y, 1, 0, TILE_SIZE * TILE_SIZE},  // * Right side
-      {std::abs(y0 - *y), *x, y0, 0, -1, TILE_SIZE * TILE_SIZE}, // * Top side
-      {std::abs(y1 - *y), *x, y1, 0, 1, TILE_SIZE * TILE_SIZE},  // * Bottom side
-      {std::abs(x0 - *x) * std::abs(x0 - *x) + std::abs(y0 - *y) * std::abs(y0 - *y),
-       x0, y0, -1, -1, TILE_SIZE * TILE_SIZE * 2}, // * Top left
-      {std::abs(x1 - *x) * std::abs(x1 - *x) + std::abs(y0 - *y) * std::abs(y0 - *y),
-       x1, y0, 1, -1, TILE_SIZE * TILE_SIZE * 2}, // * Top right
-      {std::abs(x0 - *x) * std::abs(x0 - *x) + std::abs(y1 - *y) * std::abs(y1 - *y),
-       x0, y1, -1, 1, TILE_SIZE * TILE_SIZE * 2}, // * Bottom left
-      {std::abs(x1 - *x) * std::abs(x1 - *x) + std::abs(y1 - *y) * std::abs(y1 - *y),
-       x1, y1, 1, 1, TILE_SIZE * TILE_SIZE * 2}, // * Bottom right
+    {sqr_dist(x0, 0, *x, 0), x0, *y, -1, 0, TILE_SIZE * TILE_SIZE},        // * Left side
+    {sqr_dist(x1, 0, *x, 0), x1, *y, 1, 0, TILE_SIZE * TILE_SIZE},         // * Right side
+    {sqr_dist(0, y0, 0, *y), *x, y0, 0, -1, TILE_SIZE * TILE_SIZE},        // * Top side
+    {sqr_dist(0, y1, 0, *y), *x, y1, 0, 1, TILE_SIZE * TILE_SIZE},         // * Bottom side
+    {sqr_dist(x0, y0, *x, *y), x0, y0, -1, -1, TILE_SIZE * TILE_SIZE * 2}, // * Top left
+    {sqr_dist(x1, y0, *x, *y), x1, y0, 1, -1, TILE_SIZE * TILE_SIZE * 2},  // * Top right
+    {sqr_dist(x0, y1, *x, *y), x0, y1, -1, 1, TILE_SIZE * TILE_SIZE * 2},  // * Bottom left
+    {sqr_dist(x1, y1, *x, *y), x1, y1, 1, 1, TILE_SIZE * TILE_SIZE * 2},   // * Bottom right
   };
 
   constexpr int SIDES_COUNT = sizeof(sides) / sizeof(sides[0]);
 
-  // * Find which side is closest to player
+  // * Find which side is closest to player movement
   int closest = -1;
   for (auto current = 0; current < SIDES_COUNT; ++current) {
     for (int i = 1; !is_tile_empty(tile_x * sides[current].dx * i, tile_y * sides[current].dy * i); ++i) {
