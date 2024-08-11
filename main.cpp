@@ -36,7 +36,7 @@ constexpr int LEVEL_HEIGHT = 5;
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
-    {Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Wall, Tile::Wall, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Wall, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall}};
 
@@ -140,14 +140,21 @@ void resolve_player_collision(Player *player) {
   assert(player);
   int x0 = player->hitbox.x / TILE_SIZE;
   int x1 = (player->hitbox.x + player->hitbox.w) / TILE_SIZE;
-  int y = (player->hitbox.y + player->hitbox.h) / TILE_SIZE;
-  // printf("%d\n%d\n", x1, y);
+  int y0 = player->hitbox.y / TILE_SIZE;
+  int y1 = (player->hitbox.y + player->hitbox.h) / TILE_SIZE;
+  printf("%d\n%d\n", x0, y0);
   
   assert(x0 <= x1);
   for (int x = x0; x <= x1; ++x) {
-    if (is_not_oob(x, y) && level[y][x] == Tile::Wall) {
-      player->dy = 0;
-      player->hitbox.y = y * TILE_SIZE - player->hitbox.h;
+    if(is_not_oob(x, y0) && level[y0][x] == Tile::Wall) {
+      player->dy = 0; // * Drop the velocity of player
+      player->hitbox.y = (y0 + 1) * TILE_SIZE;
+      return;
+    }
+
+    if (is_not_oob(x, y1) && level[y1][x] == Tile::Wall) {
+      player->dy = 0; // * Drop the velocity of player
+      player->hitbox.y = y1 * TILE_SIZE - player->hitbox.h;
       return;
     }
   }
