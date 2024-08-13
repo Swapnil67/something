@@ -37,8 +37,8 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty},
-    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall},
-    {Tile::Wall, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty}};
+    {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall},
+    {Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Empty}};
 
 struct Sprite {
   SDL_Rect srcrect;
@@ -128,8 +128,8 @@ void update_animation(Animation *animation, uint32_t dt) {
 }
 
 struct Player {
-  int dy;
   SDL_Rect hitbox;
+  int dx, dy;
 };
 
 static inline
@@ -145,7 +145,7 @@ static inline
 int sqr_dist(int x0, int y0, int x1, int y1) {
   int dx = x0 - x1;
   int dy = y0 - y1;
-  return dx * dx + dy * dy;
+  return (dx * dx) + (dy * dy);
 }
 
 void resolve_point_collision(int *x, int *y) {
@@ -196,11 +196,15 @@ void resolve_point_collision(int *x, int *y) {
 
   // * Find which side is closest to player movement
   int closest = -1;
-  for (auto current = 0; current < SIDES_COUNT; ++current) {
-    for (int i = 1; !is_tile_empty(tile_x * sides[current].dx * i, tile_y * sides[current].dy * i); ++i) {
+  for (int current = 0; current < SIDES_COUNT; ++current) {
+    for (int i = 1;
+         !is_tile_empty(tile_x + sides[current].dx * i,
+                        tile_y + sides[current].dy * i);
+         ++i)
+    {
       sides[current].d +=  sides[current].dd;
     }
-    if (closest < 0 || sides[closest].d > sides[current].d) {
+    if (closest < 0 || sides[closest].d >= sides[current].d) {
       closest = current;
     }
   }
@@ -211,28 +215,46 @@ void resolve_point_collision(int *x, int *y) {
 
 void resolve_player_collision(Player *player) {
   assert(player);
-  int x0 = player->hitbox.x / TILE_SIZE;
-  int x1 = (player->hitbox.x + player->hitbox.w) / TILE_SIZE;
-  int y0 = player->hitbox.y / TILE_SIZE;
-  int y1 = (player->hitbox.y + player->hitbox.h) / TILE_SIZE;
-  
-  assert(x0 <= x1);
-  for (int x = x0; x <= x1; ++x) {
-    // * Top collision
-    if(is_not_oob(x, y0) && level[y0][x] == Tile::Wall) {
-      player->dy = 0; // * Drop the velocity of player
-      player->hitbox.y = (y0 + 1) * TILE_SIZE;
-      return;
+  int x0 = player->hitbox.x;
+  int y0 = player->hitbox.y;
+  int x1 = player->hitbox.x + player->hitbox.w - 1;
+  int y1 = player->hitbox.y + player->hitbox.h - 1;
+
+  int mesh[][2] = {
+    {x0, y0},
+    {x1, y0},
+    {x0, y1},
+    {x1, y1},
+  };
+
+  constexpr int MESH_COUNT = sizeof(mesh) / sizeof(mesh[0]);
+  constexpr int X = 0;
+  constexpr int Y = 1;
+
+  for (int i = 0; i < MESH_COUNT; ++i) {
+    int tx = mesh[i][X];
+    int ty = mesh[i][Y];
+    resolve_point_collision(&tx, &ty);
+    int dx = tx - mesh[i][X];
+    int dy = ty - mesh[i][Y];
+
+    if(dy) {
+      player->dy = 0;
     }
 
-    // * Bottom collision
-    if (is_not_oob(x, y1) && level[y1][x] == Tile::Wall) {
-      player->dy = 0; // * Drop the velocity of player
-      player->hitbox.y = y1 * TILE_SIZE - player->hitbox.h;
-      return;
+    if(dx) {
+      player->dx = 0;
+    }
+
+    for (int j = 0; j < MESH_COUNT; ++j) {
+      mesh[j][X] += dx;
+      mesh[j][Y] += dy;
     }
   }
 
+  static_assert(MESH_COUNT >= 1);
+  player->hitbox.x = mesh[0][X];
+  player->hitbox.y = mesh[0][Y];
 } 
 
 int main() {
@@ -340,27 +362,30 @@ int main() {
     }
 
     if(keyboard[SDL_SCANCODE_D]) {
-      player.hitbox.x += PLAYER_SPEED;
+      player.dx = PLAYER_SPEED;
       current = &walking;
       player_dir = SDL_FLIP_NONE;
     } else if(keyboard[SDL_SCANCODE_A]) {
-      player.hitbox.x -= PLAYER_SPEED;
+      player.dx = -PLAYER_SPEED;
       current = &walking;
       player_dir = SDL_FLIP_HORIZONTAL;
     } else {
+      player.dx = 0;
       current = &idle;
     }
 
     player.dy += ddy;
+    player.hitbox.x += player.dx;
     player.hitbox.y += player.dy;
+
     resolve_player_collision(&player);
+
 
     sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     sec(SDL_RenderClear(renderer));
 
     render_level(renderer, wall_texture);
-    SDL_Rect dstrect = player.hitbox;
-    render_animation(renderer, *current, dstrect, player_dir);
+    render_animation(renderer, *current, player.hitbox, player_dir);
 
     if(debug) {
       sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
