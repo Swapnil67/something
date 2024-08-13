@@ -5,7 +5,24 @@
 #include<algorithm>
 
 #include<png.h>
+#include<SDL_ttf.h>
 #include<SDL.h>
+
+template <typename T>
+T *stec(T *ptr) {
+  if(ptr == nullptr) {
+    fprintf(stderr, "SDL_ttf popped itself: %s\n", TTF_GetError());
+    abort();
+  }
+  return ptr;
+}
+
+void stec(int code) {
+  if(code < 0) {
+    fprintf(stderr, "SDL_ttf popped itself: %s\n", TTF_GetError());
+    abort();
+  }
+}
 
 int sec(int code) {
   if(code < 0) {
@@ -38,7 +55,7 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty},
     {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall},
-    {Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Empty}};
+    {Tile::Wall, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Empty}};
 
 struct Sprite {
   SDL_Rect srcrect;
@@ -267,7 +284,7 @@ int main() {
   SDL_Renderer *renderer = sec(SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED));
 
   // * Get tile texture from png
-  SDL_Texture *tileset_texture = load_texture_from_png_file(renderer, "fantasy_tiles.png");
+  SDL_Texture *tileset_texture = load_texture_from_png_file(renderer, "assets/fantasy_tiles.png");
 
   Sprite wall_texture = {
     .srcrect = {120, 128, 16, 16},
@@ -275,7 +292,7 @@ int main() {
   };
 
   // * Get the walking texture from png
-  SDL_Texture *walking_texture = load_texture_from_png_file(renderer, "walking-12px.png");
+  SDL_Texture *walking_texture = load_texture_from_png_file(renderer, "assets/walking-12px.png");
 
   constexpr int walking_frame_size = 48;
   constexpr int walking_frame_count = 4;
@@ -306,6 +323,13 @@ int main() {
   Player player = {};
   player.dy = 0;
   player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
+
+  stec(TTF_Init());
+  TTF_Font *font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", 69));
+  SDL_Surface *hello_world_surface = stec(TTF_RenderText_Blended(font, "Welcome to my Dungeon", {255, 0, 0, 255}));
+  SDL_Texture *hello_world_texture = stec(SDL_CreateTextureFromSurface(renderer, hello_world_surface));
+  SDL_FreeSurface(hello_world_surface);
+
 
   int ddy = 1; // * gravity
   bool quit = false;
@@ -393,6 +417,20 @@ int main() {
 
       sec(SDL_RenderFillRect(renderer, &cursor));
       sec(SDL_RenderDrawRect(renderer, &tile_rect));
+    }
+
+    {
+      int w, h;
+      sec(SDL_QueryTexture(hello_world_texture,
+                           NULL, NULL,
+                           &w, &h));
+      SDL_Rect srcrect = {0, 0, w, h};
+      SDL_Rect dstrect = {0, 0, w, h};
+
+      sec(SDL_RenderCopy(renderer,
+                         hello_world_texture,
+                         &srcrect,
+                         &dstrect));
     }
 
     SDL_RenderPresent(renderer);
