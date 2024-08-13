@@ -252,16 +252,16 @@ void resolve_player_collision(Player *player) {
     int tx = mesh[i][X];
     int ty = mesh[i][Y];
     resolve_point_collision(&tx, &ty);
+
+    // * Snaps the player to proper position & resolves the collision
     int dx = tx - mesh[i][X];
     int dy = ty - mesh[i][Y];
 
-    if(dy) {
-      player->dy = 0;
-    }
-
-    if(dx) {
+    constexpr int IMPACT_THRESHOLD = 5;
+    if (std::abs(dx) >= IMPACT_THRESHOLD)
       player->dx = 0;
-    }
+    if (std::abs(dy) >= IMPACT_THRESHOLD)
+      player->dy = 0;
 
     for (int j = 0; j < MESH_COUNT; ++j) {
       mesh[j][X] += dx;
@@ -273,6 +273,49 @@ void resolve_player_collision(Player *player) {
   player->hitbox.x = mesh[0][X];
   player->hitbox.y = mesh[0][Y];
 } 
+
+SDL_Texture *render_text_as_texture(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color) {
+  SDL_Surface *surface = stec(TTF_RenderText_Blended(font, text, color));
+  SDL_Texture *texture = stec(SDL_CreateTextureFromSurface(renderer, surface));
+  SDL_FreeSurface(surface);
+  return texture;
+}
+
+void render_texture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
+  // * get the width & height of texture
+  int w, h;
+  sec(SDL_QueryTexture(texture, NULL, NULL, &w, &h));
+  // * box from texture
+  SDL_Rect srcrect = {0, 0, w, h};
+
+  // * box to destination
+  SDL_Rect dstrect = {x, y, w, h};
+  sec(SDL_RenderCopy(renderer, texture, &srcrect, &dstrect));
+}
+
+constexpr size_t DIGITS_COUNT = 10;
+SDL_Texture *digits_textures[DIGITS_COUNT];
+
+void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int y) {
+  if(number == 0) {
+    static_assert(DIGITS_COUNT > 1);
+    render_texture(renderer, digits_textures[0], x, y);
+    return;
+  }
+
+  while (number != 0) {
+    int d = number % 10; // * gives the last digit
+    if (d < 0 || d > 9) {
+      printf("%d\n", d);
+    }
+    // * pre-rendered glyphs
+    int w;
+    sec(SDL_QueryTexture(digits_textures[d], NULL, NULL, &w, NULL));
+    render_texture(renderer, digits_textures[d], x, y);
+    x -= w;
+    number = number / 10;
+  }
+}
 
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
@@ -326,10 +369,12 @@ int main() {
 
   stec(TTF_Init());
   TTF_Font *font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", 69));
-  SDL_Surface *hello_world_surface = stec(TTF_RenderText_Blended(font, "Welcome to my Dungeon", {255, 0, 0, 255}));
-  SDL_Texture *hello_world_texture = stec(SDL_CreateTextureFromSurface(renderer, hello_world_surface));
-  SDL_FreeSurface(hello_world_surface);
-
+  SDL_Texture *text_texture = render_text_as_texture(renderer, font, "Welcome to my Dungeon", {255, 0, 0, 255});
+  for (size_t i = 0; i < DIGITS_COUNT; ++i) {
+    char bufffer[256];
+    snprintf(bufffer, sizeof(bufffer), "%lu", i);
+    digits_textures[i] = render_text_as_texture(renderer, font, bufffer, {255, 0, 0, 255});
+  }
 
   int ddy = 1; // * gravity
   bool quit = false;
@@ -418,20 +463,10 @@ int main() {
       sec(SDL_RenderFillRect(renderer, &cursor));
       sec(SDL_RenderDrawRect(renderer, &tile_rect));
     }
-
-    {
-      int w, h;
-      sec(SDL_QueryTexture(hello_world_texture,
-                           NULL, NULL,
-                           &w, &h));
-      SDL_Rect srcrect = {0, 0, w, h};
-      SDL_Rect dstrect = {0, 0, w, h};
-
-      sec(SDL_RenderCopy(renderer,
-                         hello_world_texture,
-                         &srcrect,
-                         &dstrect));
-    }
+    
+    // render_texture(renderer, text_texture, 0, 0);
+    // render_texture(renderer, digits_textures[7], 0, 0);
+    render_digits_of_number(renderer, -12345, 200, 0);
 
     SDL_RenderPresent(renderer);
 
