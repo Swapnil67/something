@@ -54,7 +54,7 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty},
-    {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall},
     {Tile::Wall, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Empty}};
 
 struct Sprite {
@@ -169,6 +169,7 @@ void resolve_point_collision(int *x, int *y) {
   assert(x);
   assert(y);
 
+  // * Calculates which tile player is currently standing
   const int tile_x = *x / TILE_SIZE;
   const int tile_y = *y / TILE_SIZE;
 
@@ -177,16 +178,20 @@ void resolve_point_collision(int *x, int *y) {
     return;
   }
 
+  // printf("-------- *x : %d & *Y : %d \n", *x, *y);
   // printf(" tile_x: %d & tile_y: %d \n", tile_x, tile_y);
 
-  const int x0 = tile_x * TILE_SIZE;
-  const int x1 = (tile_x + 1) * TILE_SIZE;
-  const int y0 = tile_y * TILE_SIZE;
-  const int y1 = (tile_y + 1) * TILE_SIZE;
+  // * Calculates the tile hitbox points
+  const int tx0 = tile_x * TILE_SIZE;
+  const int tx1 = (tile_x + 1) * TILE_SIZE;
+  const int ty0 = tile_y * TILE_SIZE;
+  const int ty1 = (tile_y + 1) * TILE_SIZE;
 
-  // printf("-------- *x : %d & *Y : %d \n", *x, *y);
-  // printf("-------- x0 : %d & x1 : %d \n", x0, x1);
-  // printf("-------- y0 : %d & y1 : %d \n", y0, y1);
+  // * tx0 = 0, tx1 = 64
+  // * ty0 = 256, ty1 = 320
+
+  // printf("-------- tx0 : %d & tx1 : %d \n", tx0, tx1);
+  // printf("-------- ty0 : %d & ty1 : %d \n", ty0, ty1);
 
   struct Side {
     int d;
@@ -199,17 +204,21 @@ void resolve_point_collision(int *x, int *y) {
 
   // * distance x and y
   Side sides[] = {
-    {sqr_dist(x0, 0, *x, 0), x0, *y, -1, 0, TILE_SIZE * TILE_SIZE},        // * Left side
-    {sqr_dist(x1, 0, *x, 0), x1, *y, 1, 0, TILE_SIZE * TILE_SIZE},         // * Right side
-    {sqr_dist(0, y0, 0, *y), *x, y0, 0, -1, TILE_SIZE * TILE_SIZE},        // * Top side
-    {sqr_dist(0, y1, 0, *y), *x, y1, 0, 1, TILE_SIZE * TILE_SIZE},         // * Bottom side
-    {sqr_dist(x0, y0, *x, *y), x0, y0, -1, -1, TILE_SIZE * TILE_SIZE * 2}, // * Top left
-    {sqr_dist(x1, y0, *x, *y), x1, y0, 1, -1, TILE_SIZE * TILE_SIZE * 2},  // * Top right
-    {sqr_dist(x0, y1, *x, *y), x0, y1, -1, 1, TILE_SIZE * TILE_SIZE * 2},  // * Bottom left
-    {sqr_dist(x1, y1, *x, *y), x1, y1, 1, 1, TILE_SIZE * TILE_SIZE * 2},   // * Bottom right
+    {sqr_dist(tx0, 0, *x, 0), tx0, *y, -1, 0, TILE_SIZE * TILE_SIZE},          // * Left side
+    {sqr_dist(tx1, 0, *x, 0), tx1, *y, 1, 0, TILE_SIZE * TILE_SIZE},           // * Right side
+    {sqr_dist(0, ty0, 0, *y), *x, ty0, 0, -1, TILE_SIZE * TILE_SIZE},          // * Top side
+    {sqr_dist(0, ty1, 0, *y), *x, ty1, 0, 1, TILE_SIZE * TILE_SIZE},           // * Bottom side
+    {sqr_dist(tx0, ty0, *x, *y), tx0, ty0, -1, -1, TILE_SIZE * TILE_SIZE * 2}, // * Top left
+    {sqr_dist(tx1, ty0, *x, *y), tx1, ty0, 1, -1, TILE_SIZE * TILE_SIZE * 2},  // * Top right
+    {sqr_dist(tx0, ty1, *x, *y), tx0, ty1, -1, 1, TILE_SIZE * TILE_SIZE * 2},  // * Bottom left
+    {sqr_dist(tx1, ty1, *x, *y), tx1, ty1, 1, 1, TILE_SIZE * TILE_SIZE * 2},   // * Bottom right
   };
 
   constexpr int SIDES_COUNT = sizeof(sides) / sizeof(sides[0]);
+  // for (int i = 0; i < SIDES_COUNT; ++i) {
+  //    printf("-------- d : %d\n", sides[i].d);
+  // }
+  // printf("==============================");
 
   // * Find which side is closest to player movement
   int closest = -1;
@@ -225,17 +234,23 @@ void resolve_point_collision(int *x, int *y) {
       closest = current;
     }
   }
-
+  // printf("------- closest %d\n", closest);
   *x = sides[closest].x;
   *y = sides[closest].y;
+  // printf("-------- *x : %d & *Y : %d \n", *x, *y);
 }
 
+// * Resolves player collision
 void resolve_player_collision(Player *player) {
   assert(player);
+
+  // * Player hitbox points
   int x0 = player->hitbox.x;
   int y0 = player->hitbox.y;
   int x1 = player->hitbox.x + player->hitbox.w - 1;
   int y1 = player->hitbox.y + player->hitbox.h - 1;
+
+  // printf("%d\t%d\t%d\t%d\n", x0, x1, y0, y1);
 
   int mesh[][2] = {
     {x0, y0},
@@ -243,6 +258,15 @@ void resolve_player_collision(Player *player) {
     {x0, y1},
     {x1, y1},
   };
+
+  /*
+  * mesh = {
+  *   { 0, 210 }
+  *   { 47, 210 }
+  *   { 0, 250 }
+  *   { 47, 250 }
+  * }
+  */
 
   constexpr int MESH_COUNT = sizeof(mesh) / sizeof(mesh[0]);
   constexpr int X = 0;
@@ -317,6 +341,20 @@ void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int
   }
 }
 
+void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int x, int y, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+
+  char text[256];
+  vsnprintf(text, sizeof(text), format, args);
+
+  SDL_Texture *texture = render_text_as_texture(renderer, font, text, color);
+  render_texture(renderer, texture, x, y);
+  SDL_DestroyTexture(texture);
+
+  va_end(args);
+}
+
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
 
@@ -369,12 +407,6 @@ int main() {
 
   stec(TTF_Init());
   TTF_Font *font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", 69));
-  SDL_Texture *text_texture = render_text_as_texture(renderer, font, "Welcome to my Dungeon", {255, 0, 0, 255});
-  for (size_t i = 0; i < DIGITS_COUNT; ++i) {
-    char bufffer[256];
-    snprintf(bufffer, sizeof(bufffer), "%lu", i);
-    digits_textures[i] = render_text_as_texture(renderer, font, bufffer, {255, 0, 0, 255});
-  }
 
   int ddy = 1; // * gravity
   bool quit = false;
@@ -464,10 +496,8 @@ int main() {
       sec(SDL_RenderDrawRect(renderer, &tile_rect));
     }
     
-    // render_texture(renderer, text_texture, 0, 0);
-    // render_texture(renderer, digits_textures[7], 0, 0);
-    render_digits_of_number(renderer, -12345, 200, 0);
-
+    // render_digits_of_number(renderer, -12345, 200, 0);
+    displayf(renderer, font, {255, 255, 0, 255}, player.hitbox.x, 0, "Ticks: %dms", SDL_GetTicks() - begin);
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
