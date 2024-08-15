@@ -406,7 +406,8 @@ int main() {
   player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
 
   stec(TTF_Init());
-  TTF_Font *font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", 69));
+  constexpr int DEBUG_FONT_SIZE = 36;
+  TTF_Font *debug_font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", DEBUG_FONT_SIZE));
 
   int ddy = 1; // * gravity
   bool quit = false;
@@ -494,10 +495,14 @@ int main() {
 
       sec(SDL_RenderFillRect(renderer, &cursor));
       sec(SDL_RenderDrawRect(renderer, &tile_rect));
+
+      const Uint32 t = SDL_GetTicks() - begin;
+      const Uint32 fps = t ? 1000 / t : 0;
+      constexpr int PADDING = 10;
+      displayf(renderer, debug_font, {255, 0, 0, 255}, PADDING, PADDING, "FPS: %d", fps);
     }
     
-    // render_digits_of_number(renderer, -12345, 200, 0);
-    displayf(renderer, font, {255, 255, 0, 255}, player.hitbox.x, 0, "Ticks: %dms", SDL_GetTicks() - begin);
+
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
