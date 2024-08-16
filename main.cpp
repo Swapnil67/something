@@ -393,8 +393,8 @@ int main() {
   SDL_RendererFlip player_dir = SDL_FLIP_NONE; 
 
   constexpr int PLAYER_SPEED = 4;
-  constexpr int CURSOR_SIZE = 10;
-  SDL_Rect cursor = {};
+  constexpr int COLLISION_PROBE_SIZE = 10;
+  SDL_Rect collision_probe = {};
   Vec2i mouse_position = {};
   SDL_Rect tile_rect = {};
 
@@ -425,11 +425,11 @@ int main() {
         case SDL_MOUSEMOTION: {
           Vec2i p = {event.motion.x, event.motion.y};
           resolve_point_collision(&p);
-          cursor = {
-              p.x - CURSOR_SIZE,
-              p.y - CURSOR_SIZE,
-              CURSOR_SIZE * 2,
-              CURSOR_SIZE * 2};
+          collision_probe = {
+              p.x - COLLISION_PROBE_SIZE,
+              p.y - COLLISION_PROBE_SIZE,
+              COLLISION_PROBE_SIZE * 2,
+              COLLISION_PROBE_SIZE * 2};
           tile_rect = {
               event.motion.x / TILE_SIZE * TILE_SIZE,
               event.motion.y / TILE_SIZE * TILE_SIZE,
@@ -469,7 +469,7 @@ int main() {
       sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
       sec(SDL_RenderDrawRect(renderer, &player.hitbox));
 
-      sec(SDL_RenderFillRect(renderer, &cursor));
+      sec(SDL_RenderFillRect(renderer, &collision_probe));
       sec(SDL_RenderDrawRect(renderer, &tile_rect));
 
       const Uint32 t = SDL_GetTicks() - begin;
@@ -477,7 +477,7 @@ int main() {
       constexpr int PADDING = 10;
       // displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 4), "Mouse Position (%d, %d)", mouse_position.x, mouse_position.y);
-      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", cursor.x, cursor.y);
+      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", collision_probe.x, collision_probe.y);
     }
     
     SDL_RenderPresent(renderer);
