@@ -8,6 +8,8 @@
 #include<SDL_ttf.h>
 #include<SDL.h>
 
+#include "vec.hpp"
+
 template <typename T>
 T *stec(T *ptr) {
   if(ptr == nullptr) {
@@ -42,6 +44,7 @@ T *sec(T *ptr) {
 } 
 
 constexpr int TILE_SIZE = 64;
+constexpr int TILE_SIZE_SQR = TILE_SIZE * TILE_SIZE;
 
 enum class Tile {
   Empty = 0,
@@ -146,7 +149,8 @@ void update_animation(Animation *animation, uint32_t dt) {
 
 struct Player {
   SDL_Rect hitbox;
-  int dx, dy;
+  Vec2i vel;
+  // int dx, dy;
 };
 
 static inline
@@ -154,80 +158,64 @@ bool is_not_oob(int x, int y) {
   return 0 <= x && x < LEVEL_WIDTH && 0 <= y && y < LEVEL_HEIGHT;
 }
 
-bool is_tile_empty(int x, int y) {
-  return !is_not_oob(x, y) || level[y][x] == Tile::Empty;
+bool is_tile_empty(Vec2i p) {
+  return !is_not_oob(p.x, p.y) || level[p.y][p.x] == Tile::Empty;
 }
 
 static inline
-int sqr_dist(int x0, int y0, int x1, int y1) {
-  int dx = x0 - x1;
-  int dy = y0 - y1;
-  return (dx * dx) + (dy * dy);
+int sqr_dist(Vec2i p0, Vec2i p1) {
+  auto d = p0 - p1;
+  return (d.x * d.x) + (d.y * d.y);
 }
 
-void resolve_point_collision(int *x, int *y) {
-  assert(x);
-  assert(y);
+void resolve_point_collision(Vec2i *p) {
+  assert(p);
 
   // * Calculates which tile player is currently standing
-  const int tile_x = *x / TILE_SIZE;
-  const int tile_y = *y / TILE_SIZE;
+  const auto tile = *p / TILE_SIZE;
+  // printf("Position : %d\t%d\n", p->x, p->y);
+  // printf("Tile x : %d\t Tile y : %d\n", tile.x, tile.y);
 
   // * Out of bound [No Tile To Walk]
-  if (!is_not_oob(tile_x, tile_y) || level[tile_y][tile_x] == Tile::Empty) {
+  if (is_tile_empty(tile)) {
     return;
   }
 
-  // printf("-------- *x : %d & *Y : %d \n", *x, *y);
-  // printf(" tile_x: %d & tile_y: %d \n", tile_x, tile_y);
-
   // * Calculates the tile hitbox points
-  const int tx0 = tile_x * TILE_SIZE;
-  const int tx1 = (tile_x + 1) * TILE_SIZE;
-  const int ty0 = tile_y * TILE_SIZE;
-  const int ty1 = (tile_y + 1) * TILE_SIZE;
-
-  // * tx0 = 0, tx1 = 64
-  // * ty0 = 256, ty1 = 320
-
-  // printf("-------- tx0 : %d & tx1 : %d \n", tx0, tx1);
-  // printf("-------- ty0 : %d & ty1 : %d \n", ty0, ty1);
+  const auto p0 = tile * TILE_SIZE;
+  const auto p1 = (tile + 1) * TILE_SIZE;
+  // printf("%d\t%d\t%d\t%d\n", p0.x, p1.x, p0.y, p1.y);
 
   struct Side {
     int d;
-    int x;
-    int y;
-    int dx;
-    int dy;
+    Vec2i np;     // * neighbor position
+    Vec2i nd;     // * neighbor direction
     int dd;
   };
 
   // * distance x and y
   Side sides[] = {
-    {sqr_dist(tx0, 0, *x, 0), tx0, *y, -1, 0, TILE_SIZE * TILE_SIZE},          // * Left side
-    {sqr_dist(tx1, 0, *x, 0), tx1, *y, 1, 0, TILE_SIZE * TILE_SIZE},           // * Right side
-    {sqr_dist(0, ty0, 0, *y), *x, ty0, 0, -1, TILE_SIZE * TILE_SIZE},          // * Top side
-    {sqr_dist(0, ty1, 0, *y), *x, ty1, 0, 1, TILE_SIZE * TILE_SIZE},           // * Bottom side
-    {sqr_dist(tx0, ty0, *x, *y), tx0, ty0, -1, -1, TILE_SIZE * TILE_SIZE * 2}, // * Top left
-    {sqr_dist(tx1, ty0, *x, *y), tx1, ty0, 1, -1, TILE_SIZE * TILE_SIZE * 2},  // * Top right
-    {sqr_dist(tx0, ty1, *x, *y), tx0, ty1, -1, 1, TILE_SIZE * TILE_SIZE * 2},  // * Bottom left
-    {sqr_dist(tx1, ty1, *x, *y), tx1, ty1, 1, 1, TILE_SIZE * TILE_SIZE * 2},   // * Bottom right
+      {sqr_dist({p0.x, 0}, {p->x, 0}), {p0.x, p->y}, {-1, 0}, TILE_SIZE_SQR},            // * Left side
+      {sqr_dist({p1.x, 0}, {p->x, 0}), {p1.x, p->y}, {1, 0}, TILE_SIZE_SQR},             // * Right side
+      {sqr_dist({0, p0.y}, {0, p->y}), {p->x, p0.y}, {0, -1}, TILE_SIZE_SQR},            // * Top side
+      {sqr_dist({0, p1.y}, {0, p->y}), {p->x, p1.y}, {0, 1}, TILE_SIZE_SQR},             // * Bottom side
+      {sqr_dist({p0.x, p0.y}, {p->x, p->y}), {p0.x, p0.y}, {-1, -1}, TILE_SIZE_SQR * 2}, // * Top left
+      {sqr_dist({p1.x, p0.y}, {p->x, p->y}), {p1.x, p0.y}, {1, -1}, TILE_SIZE_SQR * 2},  // * Top right
+      {sqr_dist({p0.x, p1.y}, {p->x, p->y}), {p0.x, p1.y}, {-1, 1}, TILE_SIZE_SQR * 2},  // * Bottom left
+      {sqr_dist({p1.x, p1.y}, {p->x, p->y}), {p1.x, p1.y}, {1, 1}, TILE_SIZE_SQR * 2},   // * Bottom right
   };
 
   constexpr int SIDES_COUNT = sizeof(sides) / sizeof(sides[0]);
-  // for (int i = 0; i < SIDES_COUNT; ++i) {
-  //    printf("-------- d : %d\n", sides[i].d);
-  // }
-  // printf("==============================");
 
   // * Find which side is closest to player movement
   int closest = -1;
   for (int current = 0; current < SIDES_COUNT; ++current) {
+      // printf("current %d\n", current);
     for (int i = 1;
-         !is_tile_empty(tile_x + sides[current].dx * i,
-                        tile_y + sides[current].dy * i);
+         !is_tile_empty(tile + sides[current].nd * i);
          ++i)
     {
+      // printf("sides[current].d %d\n", sides[current].d);
       sides[current].d +=  sides[current].dd;
     }
     if (closest < 0 || sides[closest].d >= sides[current].d) {
@@ -235,9 +223,9 @@ void resolve_point_collision(int *x, int *y) {
     }
   }
   // printf("------- closest %d\n", closest);
-  *x = sides[closest].x;
-  *y = sides[closest].y;
-  // printf("-------- *x : %d & *Y : %d \n", *x, *y);
+  *p = sides[closest].np;
+  // printf("Position : %d\t%d\n", p->x, p->y);
+
 }
 
 // * Resolves player collision
@@ -245,57 +233,40 @@ void resolve_player_collision(Player *player) {
   assert(player);
 
   // * Player hitbox points
-  int x0 = player->hitbox.x;
-  int y0 = player->hitbox.y;
-  int x1 = player->hitbox.x + player->hitbox.w - 1;
-  int y1 = player->hitbox.y + player->hitbox.h - 1;
+  Vec2i p0 = vec2(player->hitbox.x, player->hitbox.y);
+  Vec2i p1 = p0 + vec2(player->hitbox.w, player->hitbox.h);
 
-  // printf("%d\t%d\t%d\t%d\n", x0, x1, y0, y1);
-
-  int mesh[][2] = {
-    {x0, y0},
-    {x1, y0},
-    {x0, y1},
-    {x1, y1},
+  // printf("%d\t%d\t%d\t%d\n", p0.x, p1.x, p0.y, p1.y);
+  // * 0       48       211      259
+  Vec2i mesh[] = {
+    p0,
+    {p1.x, p0.y},
+    {p0.x, p1.y},
+    p1
   };
 
-  /*
-  * mesh = {
-  *   { 0, 210 }
-  *   { 47, 210 }
-  *   { 0, 250 }
-  *   { 47, 250 }
-  * }
-  */
-
   constexpr int MESH_COUNT = sizeof(mesh) / sizeof(mesh[0]);
-  constexpr int X = 0;
-  constexpr int Y = 1;
-
   for (int i = 0; i < MESH_COUNT; ++i) {
-    int tx = mesh[i][X];
-    int ty = mesh[i][Y];
-    resolve_point_collision(&tx, &ty);
+    Vec2i t = mesh[i];
+    resolve_point_collision(&t);
 
     // * Snaps the player to proper position & resolves the collision
-    int dx = tx - mesh[i][X];
-    int dy = ty - mesh[i][Y];
+    Vec2i d = t - mesh[i];
 
     constexpr int IMPACT_THRESHOLD = 5;
-    if (std::abs(dx) >= IMPACT_THRESHOLD)
-      player->dx = 0;
-    if (std::abs(dy) >= IMPACT_THRESHOLD)
-      player->dy = 0;
+    if (std::abs(d.y) >= IMPACT_THRESHOLD)
+      player->vel.y = 0;
+    if (std::abs(d.x) >= IMPACT_THRESHOLD)
+      player->vel.x = 0;
 
     for (int j = 0; j < MESH_COUNT; ++j) {
-      mesh[j][X] += dx;
-      mesh[j][Y] += dy;
+      mesh[j] += d;
     }
   }
 
   static_assert(MESH_COUNT >= 1);
-  player->hitbox.x = mesh[0][X];
-  player->hitbox.y = mesh[0][Y];
+  player->hitbox.x = mesh[0].x;
+  player->hitbox.y = mesh[0].y;
 } 
 
 SDL_Texture *render_text_as_texture(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color) {
@@ -341,7 +312,7 @@ void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int
   }
 }
 
-void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int x, int y, const char *format, ...) {
+void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2i p, const char *format, ...) {
   va_list args;
   va_start(args, format);
 
@@ -349,10 +320,16 @@ void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int x, in
   vsnprintf(text, sizeof(text), format, args);
 
   SDL_Texture *texture = render_text_as_texture(renderer, font, text, color);
-  render_texture(renderer, texture, x, y);
+  render_texture(renderer, texture, p.x, p.y);
   SDL_DestroyTexture(texture);
 
   va_end(args);
+}
+
+int main2() {
+  Vec2i p = vec2(48, 259);
+  resolve_point_collision(&p);
+  return 0;
 }
 
 int main() {
@@ -402,7 +379,6 @@ int main() {
 
   // * Player
   Player player = {};
-  player.dy = 0;
   player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
 
   stec(TTF_Init());
@@ -419,6 +395,7 @@ int main() {
   constexpr int PLAYER_SPEED = 4;
   constexpr int CURSOR_SIZE = 10;
   SDL_Rect cursor = {};
+  Vec2i mouse_position = {};
   SDL_Rect tile_rect = {};
 
   while (!quit) {
@@ -433,7 +410,7 @@ int main() {
         case SDL_KEYDOWN: {
           switch (event.key.keysym.sym) {
             case SDLK_SPACE: {
-              player.dy = -20;
+              player.vel.y = -20;
             } break;
             case SDLK_q: {
               debug = !debug;
@@ -441,17 +418,16 @@ int main() {
             case SDLK_r: {
               player.hitbox.x = 0;
               player.hitbox.y = 0;
-              player.dy = 0;
+              player.vel.y = 0;
             } break;
           }
         } break;
         case SDL_MOUSEMOTION: {
-          auto x = event.motion.x;
-          auto y = event.motion.y;
-          resolve_point_collision(&x, &y);
+          Vec2i p = {event.motion.x, event.motion.y};
+          resolve_point_collision(&p);
           cursor = {
-              x - CURSOR_SIZE,
-              y - CURSOR_SIZE,
+              p.x - CURSOR_SIZE,
+              p.y - CURSOR_SIZE,
               CURSOR_SIZE * 2,
               CURSOR_SIZE * 2};
           tile_rect = {
@@ -459,29 +435,29 @@ int main() {
               event.motion.y / TILE_SIZE * TILE_SIZE,
               TILE_SIZE,
               TILE_SIZE};
+          mouse_position = {event.motion.x, event.motion.y};
         } break;
       }
     }
 
     if(keyboard[SDL_SCANCODE_D]) {
-      player.dx = PLAYER_SPEED;
+      player.vel.x = PLAYER_SPEED;
       current = &walking;
       player_dir = SDL_FLIP_NONE;
     } else if(keyboard[SDL_SCANCODE_A]) {
-      player.dx = -PLAYER_SPEED;
+      player.vel.x = -PLAYER_SPEED;
       current = &walking;
       player_dir = SDL_FLIP_HORIZONTAL;
     } else {
-      player.dx = 0;
+      player.vel.x = 0;
       current = &idle;
     }
 
-    player.dy += ddy;
-    player.hitbox.x += player.dx;
-    player.hitbox.y += player.dy;
+    player.vel.y += ddy;
+    player.hitbox.x += player.vel.x;
+    player.hitbox.y += player.vel.y;
 
     resolve_player_collision(&player);
-
 
     sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     sec(SDL_RenderClear(renderer));
@@ -499,10 +475,11 @@ int main() {
       const Uint32 t = SDL_GetTicks() - begin;
       const Uint32 fps = t ? 1000 / t : 0;
       constexpr int PADDING = 10;
-      displayf(renderer, debug_font, {255, 0, 0, 255}, PADDING, PADDING, "FPS: %d", fps);
+      // displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
+      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 4), "Mouse Position (%d, %d)", mouse_position.x, mouse_position.y);
+      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", cursor.x, cursor.y);
     }
     
-
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
