@@ -154,12 +154,12 @@ struct Player {
 };
 
 static inline
-bool is_not_oob(int x, int y) {
-  return 0 <= x && x < LEVEL_WIDTH && 0 <= y && y < LEVEL_HEIGHT;
+bool is_not_oob(Vec2i p) {
+  return 0 <= p.x && p.x < LEVEL_WIDTH && 0 <= p.y && p.y < LEVEL_HEIGHT;
 }
 
 bool is_tile_empty(Vec2i p) {
-  return !is_not_oob(p.x, p.y) || level[p.y][p.x] == Tile::Empty;
+  return !is_not_oob(p) || level[p.y][p.x] == Tile::Empty;
 }
 
 static inline
@@ -437,6 +437,19 @@ int main() {
               TILE_SIZE};
           mouse_position = {event.motion.x, event.motion.y};
         } break;
+        case SDL_MOUSEBUTTONDOWN: {
+          if(debug) {
+            Vec2i tile = vec2(event.button.x, event.button.y) / TILE_SIZE;
+            if(is_not_oob(tile)) {
+              if(level[tile.y][tile.x] == Tile::Empty) {
+                level[tile.y][tile.x] = Tile::Wall;
+              }
+              else {
+                level[tile.y][tile.x] = Tile::Empty;
+              }
+            }
+          }
+        }
       }
     }
 
