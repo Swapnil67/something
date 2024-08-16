@@ -51,8 +51,9 @@ enum class Tile {
   Wall
 };
 
-constexpr int LEVEL_WIDTH = 6;
-constexpr int LEVEL_HEIGHT = 5;
+constexpr int LEVEL_WIDTH = 10;
+constexpr int LEVEL_HEIGHT = 10;
+constexpr SDL_Rect level_boundary = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
@@ -211,6 +212,7 @@ void resolve_point_collision(Vec2i *p) {
   int closest = -1;
   for (int current = 0; current < SIDES_COUNT; ++current) {
       // printf("current %d\n", current);
+    // * Find closes empty towards the current side of direction
     for (int i = 1;
          !is_tile_empty(tile + sides[current].nd * i);
          ++i)
@@ -382,7 +384,7 @@ int main() {
   player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
 
   stec(TTF_Init());
-  constexpr int DEBUG_FONT_SIZE = 36;
+  constexpr int DEBUG_FONT_SIZE = 18;
   TTF_Font *debug_font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", DEBUG_FONT_SIZE));
 
   int ddy = 1; // * gravity
@@ -484,6 +486,7 @@ int main() {
 
       sec(SDL_RenderFillRect(renderer, &collision_probe));
       sec(SDL_RenderDrawRect(renderer, &tile_rect));
+      sec(SDL_RenderDrawRect(renderer, &level_boundary));
 
       const Uint32 t = SDL_GetTicks() - begin;
       const Uint32 fps = t ? 1000 / t : 0;
