@@ -175,7 +175,6 @@ struct Player {
   SDL_RendererFlip dir;
 };
 
-
 static inline
 int sqr_dist(Vec2i p0, Vec2i p1) {
   auto d = p0 - p1;
