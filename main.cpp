@@ -43,17 +43,17 @@ T *sec(T *ptr) {
   return ptr;
 } 
 
-constexpr int TILE_SIZE = 64;
-constexpr int TILE_SIZE_SQR = TILE_SIZE * TILE_SIZE;
+const int TILE_SIZE = 64;
+const int TILE_SIZE_SQR = TILE_SIZE * TILE_SIZE;
 
 enum class Tile {
   Empty = 0,
   Wall
 };
 
-constexpr int LEVEL_WIDTH = 10;
-constexpr int LEVEL_HEIGHT = 10;
-constexpr SDL_Rect level_boundary = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
+const int LEVEL_WIDTH = 10;
+const int LEVEL_HEIGHT = 10;
+const SDL_Rect level_boundary = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
@@ -218,7 +218,7 @@ void resolve_point_collision(Vec2i *p) {
       {sqr_dist({p1.x, p1.y}, {p->x, p->y}), {p1.x, p1.y}, {1, 1}, TILE_SIZE_SQR * 2},   // * Bottom right
   };
 
-  constexpr int SIDES_COUNT = sizeof(sides) / sizeof(sides[0]);
+  const int SIDES_COUNT = sizeof(sides) / sizeof(sides[0]);
 
   // * Find which side is closest to player movement
   int closest = -1;
@@ -259,7 +259,7 @@ void resolve_player_collision(Player *player) {
     p1
   };
 
-  constexpr int MESH_COUNT = sizeof(mesh) / sizeof(mesh[0]);
+  const int MESH_COUNT = sizeof(mesh) / sizeof(mesh[0]);
   for (int i = 0; i < MESH_COUNT; ++i) {
     Vec2i t = mesh[i];
     resolve_point_collision(&t);
@@ -267,7 +267,7 @@ void resolve_player_collision(Player *player) {
     // * Snaps the player to proper position & resolves the collision
     Vec2i d = t - mesh[i];
 
-    constexpr int IMPACT_THRESHOLD = 5;
+    const int IMPACT_THRESHOLD = 5;
     if (std::abs(d.y) >= IMPACT_THRESHOLD)
       player->vel.y = 0;
     if (std::abs(d.x) >= IMPACT_THRESHOLD)
@@ -321,7 +321,7 @@ void render_texture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) 
   sec(SDL_RenderCopy(renderer, texture, &srcrect, &dstrect));
 }
 
-constexpr size_t DIGITS_COUNT = 10;
+const size_t DIGITS_COUNT = 10;
 SDL_Texture *digits_textures[DIGITS_COUNT];
 
 void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int y) {
@@ -396,8 +396,8 @@ int main() {
   // * Get the walking texture from png
   SDL_Texture *walking_texture = load_texture_from_png_file(renderer, "assets/walking-12px.png");
 
-  constexpr int walking_frame_size = 48;
-  constexpr int walking_frame_count = 4;
+  const int walking_frame_size = 48;
+  const int walking_frame_count = 4;
   Sprite walking_frames[walking_frame_count];
 
   for (int i = 0; i < walking_frame_count; ++i) {
@@ -410,8 +410,8 @@ int main() {
   }
 
   // * Player
-  constexpr int PLAYER_TEXBOX_SIZE = 48;
-  constexpr int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
+  const int PLAYER_TEXBOX_SIZE = 48;
+  const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
   Player player = {};
   player.texbox = {
       -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
@@ -430,7 +430,7 @@ int main() {
 
 
   stec(TTF_Init());
-  constexpr int DEBUG_FONT_SIZE = 18;
+  const int DEBUG_FONT_SIZE = 18;
   TTF_Font *debug_font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", DEBUG_FONT_SIZE));
 
   int ddy = 1; // * gravity
@@ -438,8 +438,8 @@ int main() {
   bool debug = false;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
 
-  constexpr int PLAYER_SPEED = 4;
-  constexpr int COLLISION_PROBE_SIZE = 10;
+  const int PLAYER_SPEED = 4;
+  const int COLLISION_PROBE_SIZE = 10;
   SDL_Rect collision_probe = {};
   Vec2i mouse_position = {};
   SDL_Rect tile_rect = {};
@@ -554,7 +554,7 @@ int main() {
       const Uint32 t = SDL_GetTicks() - begin;
       const Uint32 fps_snapshot = t ? 1000 / t : 0;
       fps = (fps + fps_snapshot) / 2;
-      constexpr int PADDING = 10;
+      const int PADDING = 10;
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 4), "Mouse Position (%d, %d)", mouse_position.x, mouse_position.y);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", collision_probe.x, collision_probe.y);
