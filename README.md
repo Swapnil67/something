@@ -7,4 +7,4 @@ $ make
 $ something
 ```
 
-![alt text](https://github.com/Swapnil67/something/blob/main/something.png?raw=true)
+![alt text](https://github.com/Swapnil67/something/blob/main/assets/something_game.png?raw=true)
