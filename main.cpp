@@ -150,6 +150,7 @@ void update_animation(Animation *animation, uint32_t dt) {
 
 struct Player {
   SDL_Rect texbox;
+  SDL_Rect hitbox;
   Vec2i pos;
   Vec2i vel;
 
@@ -241,8 +242,8 @@ void resolve_player_collision(Player *player) {
   assert(player);
 
   // * Player texbox points
-  Vec2i p0 = vec2(player->texbox.x, player->texbox.y) + player->pos;
-  Vec2i p1 = p0 + vec2(player->texbox.w, player->texbox.h);
+  Vec2i p0 = vec2(player->hitbox.x, player->hitbox.y) + player->pos;
+  Vec2i p1 = p0 + vec2(player->hitbox.w, player->hitbox.h);
 
   // printf("%d\t%d\t%d\t%d\n", p0.x, p1.x, p0.y, p1.y);
   // * 0       48       211      259
@@ -270,16 +271,20 @@ void resolve_player_collision(Player *player) {
     for (int j = 0; j < MESH_COUNT; ++j) {
       mesh[j] += d;
     }
+    player->pos += d;
   }
-
-  static_assert(MESH_COUNT >= 1);
-  player->pos = mesh[0];
 } 
 
 SDL_Rect player_dstrect(const Player player) {
   SDL_Rect dstrect = {
       player.texbox.x + player.pos.x, player.texbox.y + player.pos.y, player.texbox.w, player.texbox.h};
   return dstrect;
+}
+
+SDL_Rect player_hitbox(const Player player) {
+  SDL_Rect hitbox = {
+      player.hitbox.x + player.pos.x, player.hitbox.y + player.pos.y, player.hitbox.w, player.hitbox.h};
+  return hitbox;
 }
 
 void render_player(SDL_Renderer *renderer, const Player player) {
@@ -389,8 +394,15 @@ int main() {
   }
 
   // * Player
+  constexpr int PLAYER_TEXBOX_SIZE = 48;
+  constexpr int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
   Player player = {};
-  player.texbox = {0, 0, walking_frame_size, walking_frame_size};
+  player.texbox = {
+      -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
+      PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
+  player.hitbox = {
+      -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
+      PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
   player.walking.frames = walking_frames;
   player.walking.frame_count = 4;
   player.walking.frame_duration = 150;
@@ -495,8 +507,6 @@ int main() {
     render_level(renderer, wall_texture);
     render_player(renderer, player);
 
-    // SDL_Delay(100);
-
     if(debug) {
       sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
 
@@ -514,6 +524,10 @@ int main() {
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 4), "Mouse Position (%d, %d)", mouse_position.x, mouse_position.y);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", collision_probe.x, collision_probe.y);
+
+      sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
+      auto hitbox = player_hitbox(player);
+      sec(SDL_RenderDrawRect(renderer, &hitbox));
     }
     
     SDL_RenderPresent(renderer);
