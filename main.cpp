@@ -151,7 +151,12 @@ void update_animation(Animation *animation, uint32_t dt) {
 struct Player {
   SDL_Rect hitbox;
   Vec2i vel;
-  // int dx, dy;
+
+  Animation idle;
+  Animation walking;
+  Animation *current;
+
+  SDL_RendererFlip dir;
 };
 
 static inline
@@ -367,21 +372,18 @@ int main() {
     walking_frames[i].texture = walking_texture;
   }
 
-  // * Walking Animation
-  Animation walking = {};
-  walking.frames = walking_frames;
-  walking.frame_count = 4;
-  walking.frame_duration = 150;
-  
-  // * Idle Animation
-  Animation idle = {};
-  idle.frames = walking_frames + 2; // * Pointer Arithmentic
-  idle.frame_count = 1;
-  idle.frame_duration = 100;
-
   // * Player
   Player player = {};
   player.hitbox = {0, 0, walking_frame_size, walking_frame_size};
+  player.walking.frames = walking_frames;
+  player.walking.frame_count = 4;
+  player.walking.frame_duration = 150;
+  player.idle.frames = walking_frames + 2; // * Pointer Arithmentic
+  player.idle.frame_count = 1;
+  player.idle.frame_duration = 100;
+  player.current = &player.idle;
+  player.dir = SDL_FLIP_NONE;
+
 
   stec(TTF_Init());
   constexpr int DEBUG_FONT_SIZE = 18;
@@ -390,9 +392,7 @@ int main() {
   int ddy = 1; // * gravity
   bool quit = false;
   bool debug = false;
-  Animation *current = &idle;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
-  SDL_RendererFlip player_dir = SDL_FLIP_NONE; 
 
   constexpr int PLAYER_SPEED = 4;
   constexpr int COLLISION_PROBE_SIZE = 10;
@@ -458,15 +458,15 @@ int main() {
 
     if(keyboard[SDL_SCANCODE_D]) {
       player.vel.x = PLAYER_SPEED;
-      current = &walking;
-      player_dir = SDL_FLIP_NONE;
+      player.current = &player.walking;
+      player.dir = SDL_FLIP_NONE;
     } else if(keyboard[SDL_SCANCODE_A]) {
       player.vel.x = -PLAYER_SPEED;
-      current = &walking;
-      player_dir = SDL_FLIP_HORIZONTAL;
+      player.current = &player.walking;
+      player.dir = SDL_FLIP_HORIZONTAL;
     } else {
       player.vel.x = 0;
-      current = &idle;
+      player.current = &player.idle;
     }
 
     player.vel.y += ddy;
@@ -479,7 +479,7 @@ int main() {
     sec(SDL_RenderClear(renderer));
 
     render_level(renderer, wall_texture);
-    render_animation(renderer, *current, player.hitbox, player_dir);
+    render_animation(renderer, *player.current, player.hitbox, player.dir);
 
     // SDL_Delay(100);
 
@@ -504,7 +504,7 @@ int main() {
 
     const Uint32 dt = SDL_GetTicks() - begin;
     // printf("%d\n", dt);
-    update_animation(current, dt);
+    update_animation(player.current, dt);
   }
   SDL_Quit();
   return 0;
