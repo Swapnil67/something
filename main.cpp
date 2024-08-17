@@ -399,6 +399,7 @@ int main() {
   SDL_Rect collision_probe = {};
   Vec2i mouse_position = {};
   SDL_Rect tile_rect = {};
+  Uint32 fps = 0;
 
   while (!quit) {
     const Uint32 begin = SDL_GetTicks();
@@ -480,6 +481,8 @@ int main() {
     render_level(renderer, wall_texture);
     render_animation(renderer, *current, player.hitbox, player_dir);
 
+    // SDL_Delay(100);
+
     if(debug) {
       sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
       sec(SDL_RenderDrawRect(renderer, &player.hitbox));
@@ -489,9 +492,10 @@ int main() {
       sec(SDL_RenderDrawRect(renderer, &level_boundary));
 
       const Uint32 t = SDL_GetTicks() - begin;
-      const Uint32 fps = t ? 1000 / t : 0;
+      const Uint32 fps_snapshot = t ? 1000 / t : 0;
+      fps = (fps + fps_snapshot) / 2;
       constexpr int PADDING = 10;
-      // displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
+      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 4), "Mouse Position (%d, %d)", mouse_position.x, mouse_position.y);
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", collision_probe.x, collision_probe.y);
     }
