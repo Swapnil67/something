@@ -276,6 +276,15 @@ void resolve_player_collision(Player *player) {
   player->hitbox.y = mesh[0].y;
 } 
 
+void render_player(SDL_Renderer *renderer, const Player player) {
+  render_animation(renderer, *player.current, player.hitbox, player.dir);
+}
+
+void update_player(Player *player, uint32_t dt) {
+  assert(player);
+  update_animation(player->current, dt);
+}
+
 SDL_Texture *render_text_as_texture(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color) {
   SDL_Surface *surface = stec(TTF_RenderText_Blended(font, text, color));
   SDL_Texture *texture = stec(SDL_CreateTextureFromSurface(renderer, surface));
@@ -479,7 +488,7 @@ int main() {
     sec(SDL_RenderClear(renderer));
 
     render_level(renderer, wall_texture);
-    render_animation(renderer, *player.current, player.hitbox, player.dir);
+    render_player(renderer, player);
 
     // SDL_Delay(100);
 
@@ -504,7 +513,7 @@ int main() {
 
     const Uint32 dt = SDL_GetTicks() - begin;
     // printf("%d\n", dt);
-    update_animation(player.current, dt);
+    update_player(&player, dt);
   }
   SDL_Quit();
   return 0;
