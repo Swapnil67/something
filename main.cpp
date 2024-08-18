@@ -199,6 +199,12 @@ void update_animation(Animation *animation, uint32_t dt) {
   }
 }
 
+enum class Entity_Dir
+{
+  Right = 0,
+  Left
+};
+
 struct Player {
   SDL_Rect texbox;
   SDL_Rect hitbox;
@@ -209,7 +215,7 @@ struct Player {
   Animation walking;
   Animation *current;
 
-  SDL_RendererFlip dir;
+  Entity_Dir dir;
 };
 
 static inline
@@ -330,8 +336,9 @@ SDL_Rect player_hitbox(const Player player) {
 }
 
 void render_player(SDL_Renderer *renderer, const Player player) {
-  SDL_Rect dstrect = player_dstrect(player);
-  render_animation(renderer, *player.current, dstrect, player.dir);
+  const SDL_Rect dstrect = player_dstrect(player);
+  const SDL_RendererFlip flip = player.dir == Entity_Dir::Right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
+  render_animation(renderer, *player.current, dstrect, flip);
 }
 
 void update_player(Player *player, uint32_t dt) {
@@ -440,7 +447,7 @@ struct Projectile {
   Vec2i vel;
   Animation active_animation;
   Animation poof_animation;
-  SDL_RendererFlip dir;
+  Entity_Dir dir;
 };
 
 const size_t projectiles_count = 69;
@@ -463,7 +470,7 @@ int count_alive_projectiles(void) {
   return res;
 }
 
-void spwan_projectiles(Vec2i pos, Vec2i vel, SDL_RendererFlip dir) {
+void spwan_projectiles(Vec2i pos, Vec2i vel, Entity_Dir dir) {
    for (size_t i = 0; i < projectiles_count; ++i) {
     // * Find the first one which is in ded state & activate it & return.
     if(projectiles[i].state == Projectile_State::Ded) {
@@ -478,20 +485,21 @@ void spwan_projectiles(Vec2i pos, Vec2i vel, SDL_RendererFlip dir) {
 
 void render_projectiles(SDL_Renderer *renderer) {
   for (size_t i = 0; i < projectiles_count; ++i) {
+    const SDL_RendererFlip flip = projectiles[i].dir == Entity_Dir::Right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
     switch (projectiles[i].state) {
       case Projectile_State::Active: {
         render_animation(
             renderer,
             projectiles[i].active_animation,
             projectiles[i].pos,
-            projectiles[i].dir);
+            flip);
       } break;
       case Projectile_State::Poof: {
         render_animation(
             renderer,
             projectiles[i].poof_animation,
             projectiles[i].pos,
-            projectiles[i].dir);
+            flip);
       } break;
       case Projectile_State::Ded: {
       } break;
@@ -595,7 +603,6 @@ int main() {
   player.idle.frame_count = 1;
   player.idle.frame_duration = 100;
   player.current = &player.idle;
-  player.dir = SDL_FLIP_NONE;
 
   stec(TTF_Init());
   const int DEBUG_FONT_SIZE = 18;
@@ -632,7 +639,7 @@ int main() {
               debug = !debug;
             } break;
             case SDLK_e: {
-              if(player.dir == SDL_FLIP_NONE) {
+              if(player.dir == Entity_Dir::Right) {
                 // * Facing right
                 spwan_projectiles(player.pos, vec2(10, 0), player.dir);
               }
@@ -699,11 +706,11 @@ int main() {
     if(keyboard[SDL_SCANCODE_D]) {
       player.vel.x = PLAYER_SPEED;
       player.current = &player.walking;
-      player.dir = SDL_FLIP_NONE;
+      player.dir = Entity_Dir::Right;
     } else if(keyboard[SDL_SCANCODE_A]) {
       player.vel.x = -PLAYER_SPEED;
       player.current = &player.walking;
-      player.dir = SDL_FLIP_HORIZONTAL;
+      player.dir = Entity_Dir::Left;
     } else {
       player.vel.x = 0;
       player.current = &player.idle;
