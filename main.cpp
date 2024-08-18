@@ -222,6 +222,7 @@ struct Entity {
   Animation *current;
 
   Entity_Dir dir;
+  int cooldown_weapon;
 };
 
 static inline
@@ -358,6 +359,8 @@ void update_entity(Entity *entity, Vec2i gravity, uint32_t dt) {
 
   // * Resolve Collision
   resolve_entity_collision(entity);
+
+  entity->cooldown_weapon -= 1;
 
   update_animation(entity->current, dt);
 }
@@ -589,13 +592,19 @@ void entity_stop(Entity *entity) {
   entity->current = &entity->idle;
 }
 
+const int ENTITY_WEAPON_COOLDOWN = 30;
+
 void entity_shoot(Entity *entity) {
   assert(entity);
+  if (entity->cooldown_weapon > 0)
+    return;
   if (entity->dir == Entity_Dir::Right) {
     spwan_projectiles(entity->pos, vec2(10, 0), entity->dir);
   } else {
     spwan_projectiles(entity->pos, vec2(-10, 0), entity->dir);
   }
+
+  entity->cooldown_weapon = ENTITY_WEAPON_COOLDOWN;
 }
 
 int main() {
