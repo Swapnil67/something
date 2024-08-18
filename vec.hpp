@@ -7,82 +7,87 @@ struct Vec2 {
 };
 
 template <typename T>
-Vec2<T> vec2(T x, T y) {
-  return {x, y};
-}
+Vec2<T> vec2(T x, T y) { return {x, y}; };
 
 // * alias
 using Vec2i = Vec2<int>;
 
-template <typename T>
-Vec2<T> operator+(Vec2<T> a, Vec2<T> b) {
-  return {a.x + b.x, a.y + b.y};
-}
-
-template <typename T>
-Vec2<T> operator-(Vec2<T> a, Vec2<T> b) {
-  return {a.x - b.x, a.y - b.y};
-}
-
-template <typename T>
-Vec2<T> operator*(Vec2<T> a, Vec2<T> b) {
-  return {a.x * b.x, a.y * b.y};
-}
-
-template <typename T>
-Vec2<T> operator/(Vec2<T> a, Vec2<T> b) {
-  return {a.x / b.x, a.y / b.y};
-}
-
-template <typename T>
-Vec2<T> &operator+=(Vec2<T> &a, Vec2<T> b) {
-  a = a + b;
-  return a;
-}
-
+////////////////////////////
+// * Vector X Vector
 ////////////////////////////
 
 template <typename T>
-Vec2<T> operator+(Vec2<T> a, T b) {
-  return {a.x + b, a.y + b};
-}
+Vec2<T> operator+(Vec2<T> a, Vec2<T> b) { return {a.x + b.x, a.y + b.y}; }
 
 template <typename T>
-Vec2<T> operator-(Vec2<T> a, T b) {
-  return {a.x - b, a.y - b};
-}
+Vec2<T> operator-(Vec2<T> a, Vec2<T> b) { return {a.x - b.x, a.y - b.y}; }
 
 template <typename T>
-Vec2<T> operator*(Vec2<T> a, T b) {
-  return {a.x * b, a.y * b};
-}
+Vec2<T> operator*(Vec2<T> a, Vec2<T> b) { return {a.x * b.x, a.y * b.y}; }
 
 template <typename T>
-Vec2<T> operator/(Vec2<T> a, T b) {
-  return {a.x / b, a.y / b};
-}
+Vec2<T> operator/(Vec2<T> a, Vec2<T> b) { return {a.x / b.x, a.y / b.y}; }
 
+template <typename T>
+Vec2<T> &operator+=(Vec2<T> &a, Vec2<T> b) { a = a + b; return a; }
+template <typename T>
+Vec2<T> &operator-=(Vec2<T> &a, Vec2<T> b) { a = a - b; return a; }
+template <typename T>
+Vec2<T> &operator*=(Vec2<T> &a, Vec2<T> b) { a = a * b; return a; }
+template <typename T>
+Vec2<T> &operator/=(Vec2<T> &a, Vec2<T> b) { a = a / b; return a; }
+
+////////////////////////////
+// * Vector X Scaler
 ////////////////////////////
 
 template <typename T>
-Vec2<T> operator+(T a, Vec2<T> b) {
-  return {a + b.x, a + b.y};
-}
+Vec2<T> operator+(Vec2<T> a, T b) { return {a.x + b, a.y + b}; }
 
 template <typename T>
-Vec2<T> operator-(T a, Vec2<T> b) {
-  return {a - b.x, a - b.y};
-}
+Vec2<T> operator-(Vec2<T> a, T b) { return {a.x - b, a.y - b}; }
 
 template <typename T>
-Vec2<T> operator*(T a, Vec2<T> b) {
-  return {a * b.x, a * b.y};
-}
+Vec2<T> operator*(Vec2<T> a, T b) { return {a.x * b, a.y * b}; }
 
 template <typename T>
-Vec2<T> operator/(T a, Vec2<T> b) {
-  return {a / b.x, a / b.y};
-}
+Vec2<T> operator/(Vec2<T> a, T b) { return {a.x / b, a.y / b}; }
+
+template <typename T>
+Vec2<T> &operator+=(Vec2<T> &a, T b) { a = a + b; return a; }
+template <typename T>
+Vec2<T> &operator-=(Vec2<T> &a, T b) { a = a - b; return a; }
+template <typename T>
+Vec2<T> &operator*=(Vec2<T> &a, T b) { a = a * b; return a; }
+template <typename T>
+Vec2<T> &operator/=(Vec2<T> &a, T b) { a = a / b; return a; }
+
+
+////////////////////////////
+// * Scaler X Vector
+////////////////////////////
+
+template <typename T>
+Vec2<T> operator+(T a, Vec2<T> b) { return {a + b.x, a + b.y}; }
+
+template <typename T>
+Vec2<T> operator-(T a, Vec2<T> b) { return {a - b.x, a - b.y}; }
+
+template <typename T>
+Vec2<T> operator*(T a, Vec2<T> b) { return {a * b.x, a * b.y}; }
+
+template <typename T>
+Vec2<T> operator/(T a, Vec2<T> b) { return {a / b.x, a / b.y}; }
+
+
+template <typename T>
+Vec2<T> &operator+=(T &a, Vec2<T> b) { a = a + b; return a; }
+template <typename T>
+Vec2<T> &operator-=(T &a, Vec2<T> b) { a = a - b; return a; }
+template <typename T>
+Vec2<T> &operator*=(T &a, Vec2<T> b) { a = a * b; return a; }
+template <typename T>
+Vec2<T> &operator/=(T &a, Vec2<T> b) { a = a / b; return a; }
 
 
 #endif // * VEC_HPP_
