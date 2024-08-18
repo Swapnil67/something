@@ -55,11 +55,17 @@ const int LEVEL_WIDTH = 10;
 const int LEVEL_HEIGHT = 10;
 const SDL_Rect level_boundary = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
-    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
-    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
-    {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty},
-    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall},
-    {Tile::Wall, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Empty}};
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+    {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
+};
 
 struct Sprite {
   SDL_Rect srcrect;
@@ -159,11 +165,11 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
 }
 
 struct Animation {
-  Sprite *frames;
-  size_t   frame_count;
-  size_t   frame_current;
-  uint32_t frame_duration;
-  uint32_t frame_cooldown;
+  Sprite    *frames;
+  size_t    frame_count;
+  size_t    frame_current;
+  uint32_t  frame_duration;
+  uint32_t  frame_cooldown;
 };
 
 static inline void render_animation(
@@ -535,6 +541,26 @@ void update_projectiles(uint32_t dt) {
   } 
 }
 
+void dump_level() {
+  std::printf("{\n");
+  for (int y = 0; y < LEVEL_HEIGHT; ++y) {
+    std::printf("{");
+    for (int x = 0; x < LEVEL_WIDTH; ++x) {
+      switch(level[y][x]) {
+        case Tile::Empty: {
+          std::printf("Tile::Empty, ");
+        } break;
+        case Tile::Wall: {
+          std::printf("Tile::Wall, ");
+        } break;
+      }
+    }
+    std::printf("},");
+    std::printf("\n");
+  }
+  std::printf("};\n");
+}
+
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
 
@@ -585,24 +611,42 @@ int main() {
     walking_frames[i].texture = walking_texture;
   }
 
+  // * Walking Animation
+  Animation walking = {};
+  walking.frames = walking_frames;
+  walking.frame_count = 4;
+  walking.frame_duration = 150;
+
+  // * Idle Animation
+  Animation idle = {};
+  idle.frames = walking_frames + 2;
+  idle.frame_count = 1;
+  idle.frame_duration = 100;
+
   // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
   const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
-  Entity player = {};
-  player.texbox = {
+  SDL_Rect texbox = {
       -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
       PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
-  player.hitbox = {
+  SDL_Rect hitbox = {
       -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
       PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
 
-  player.walking.frames = walking_frames;
-  player.walking.frame_count = 4;
-  player.walking.frame_duration = 150;
-  player.idle.frames = walking_frames + 2; // * Pointer Arithmentic
-  player.idle.frame_count = 1;
-  player.idle.frame_duration = 100;
+  Entity player = {};
+  player.texbox = texbox;
+  player.hitbox = hitbox;
+
+  player.walking = walking;
+  player.idle = idle;
   player.current = &player.idle;
+
+  Entity supposed_enemy = {};
+  supposed_enemy.texbox = texbox;
+  supposed_enemy.hitbox = hitbox;
+  supposed_enemy.walking = walking;
+  supposed_enemy.idle = idle;
+  supposed_enemy.current = &supposed_enemy.idle;
 
   stec(TTF_Init());
   const int DEBUG_FONT_SIZE = 18;
@@ -760,5 +804,6 @@ int main() {
     update_projectiles(dt);
   }
   SDL_Quit();
+  dump_level();
   return 0;
 }
