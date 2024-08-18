@@ -571,6 +571,25 @@ void dump_level() {
   std::printf("};\n");
 }
 
+
+void entity_move(Entity *entity, int speed) {
+  assert(entity);
+  if (speed < 0) {
+    entity->dir = Entity_Dir::Left;
+  } else if (speed > 0) {
+    entity->dir = Entity_Dir::Right;
+  }
+  entity->vel.x = speed;
+  // printf("%d\t%d\n", entity->vel.x, entity->vel.y);
+  entity->current = &entity->walking;
+}
+
+void entity_stop(Entity *entity) {
+  assert(entity);
+  entity->vel.x = 0;
+  entity->current = &entity->idle;
+}
+
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
 
@@ -608,6 +627,7 @@ int main() {
   // * Get the walking texture from png
   SDL_Texture *walking_texture = load_texture_from_png_file(renderer, "assets/walking-12px.png");
 
+  const int PLAYER_SPEED = 4;
   const int walking_frame_size = 48;
   const int walking_frame_count = 4;
   Sprite walking_frames[walking_frame_count];
@@ -639,6 +659,8 @@ int main() {
   SDL_Rect texbox = {
       -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
       PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
+  // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
+ 
   SDL_Rect hitbox = {
       -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
       PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
@@ -647,8 +669,8 @@ int main() {
   player.texbox = texbox;
   player.hitbox = hitbox;
 
-  player.walking = walking;
   player.idle = idle;
+  player.walking = walking;
   player.current = &player.idle;
 
   Entity supposed_enemy = {};
@@ -670,7 +692,6 @@ int main() {
   bool debug = false;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
 
-  const int PLAYER_SPEED = 4;
   const int COLLISION_PROBE_SIZE = 10;
   SDL_Rect collision_probe = {};
   Vec2i mouse_position = {};
@@ -760,17 +781,13 @@ int main() {
       }
     }
 
+    entity_move(&supposed_enemy, -1);
     if(keyboard[SDL_SCANCODE_D]) {
-      player.vel.x = PLAYER_SPEED;
-      player.current = &player.walking;
-      player.dir = Entity_Dir::Right;
+      entity_move(&player, PLAYER_SPEED);
     } else if(keyboard[SDL_SCANCODE_A]) {
-      player.vel.x = -PLAYER_SPEED;
-      player.current = &player.walking;
-      player.dir = Entity_Dir::Left;
+      entity_move(&player, -PLAYER_SPEED);
     } else {
-      player.vel.x = 0;
-      player.current = &player.idle;
+      entity_stop(&player);
     }
 
     sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
@@ -808,13 +825,13 @@ int main() {
     SDL_RenderPresent(renderer);
 
     const Uint32 dt = SDL_GetTicks() - begin;
-
     // printf("%d\n", dt);
+
     update_entity(&player, gravity, dt);
     update_entity(&supposed_enemy, gravity, dt);
     update_projectiles(dt);
   }
   SDL_Quit();
-  dump_level();
+  // dump_level();
   return 0;
 }
