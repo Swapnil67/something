@@ -603,7 +603,6 @@ void entity_shoot(Entity *entity) {
   } else {
     spwan_projectiles(entity->pos, vec2(-10, 0), entity->dir);
   }
-
   entity->cooldown_weapon = ENTITY_WEAPON_COOLDOWN;
 }
 
