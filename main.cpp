@@ -571,7 +571,6 @@ void dump_level() {
   std::printf("};\n");
 }
 
-
 void entity_move(Entity *entity, int speed) {
   assert(entity);
   if (speed < 0) {
@@ -588,6 +587,15 @@ void entity_stop(Entity *entity) {
   assert(entity);
   entity->vel.x = 0;
   entity->current = &entity->idle;
+}
+
+void entity_shoot(Entity *entity) {
+  assert(entity);
+  if (entity->dir == Entity_Dir::Right) {
+    spwan_projectiles(entity->pos, vec2(10, 0), entity->dir);
+  } else {
+    spwan_projectiles(entity->pos, vec2(-10, 0), entity->dir);
+  }
 }
 
 int main() {
@@ -717,13 +725,7 @@ int main() {
               debug = !debug;
             } break;
             case SDLK_e: {
-              if(player.dir == Entity_Dir::Right) {
-                // * Facing right
-                spwan_projectiles(player.pos, vec2(10, 0), player.dir);
-              }
-              else {
-                spwan_projectiles(player.pos, vec2(-10, 0), player.dir);
-              }
+              entity_shoot(&player);
             } break;
             case SDLK_r: {
               player.pos = vec2(0, 0);
@@ -781,7 +783,8 @@ int main() {
       }
     }
 
-    entity_move(&supposed_enemy, -1);
+    // entity_move(&supposed_enemy, -1);
+    entity_shoot(&supposed_enemy);
     if(keyboard[SDL_SCANCODE_D]) {
       entity_move(&player, PLAYER_SPEED);
     } else if(keyboard[SDL_SCANCODE_A]) {
