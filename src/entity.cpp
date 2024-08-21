@@ -3,7 +3,15 @@ enum class Entity_Dir {
   Left
 };
 
+enum class Entity_State {
+  Ded = 0,
+  Alive
+};
+
 struct Entity {
+
+  Entity_State state;
+
   SDL_Rect texbox;
   SDL_Rect hitbox;
   Vec2i pos;
@@ -129,6 +137,11 @@ SDL_Rect entity_hitbox(const Entity entity) {
 }
 
 void render_entity(SDL_Renderer *renderer, const Entity entity) {
+  assert(renderer);
+
+  if (entity.state == Entity_State::Ded)
+    return;
+    
   const SDL_Rect dstrect = entity_dstrect(entity);
   const SDL_RendererFlip flip = entity.dir == Entity_Dir::Right ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
   render_animation(renderer, *entity.current, dstrect, flip);
@@ -136,6 +149,9 @@ void render_entity(SDL_Renderer *renderer, const Entity entity) {
 
 void update_entity(Entity *entity, Vec2i gravity, uint32_t dt) {
   assert(entity);
+
+  if (entity->state == Entity_State::Ded)
+    return;
 
   // * Add Gravity
   entity->vel += gravity;
@@ -182,4 +198,21 @@ void entity_shoot(Entity *entity) {
     spwan_projectiles(entity->pos, vec2(-10, 0));
   }
   entity->cooldown_weapon = ENTITY_WEAPON_COOLDOWN;
+}
+
+const int entities_count = 69;
+Entity entities[entities_count];
+
+// * update all entities
+void update_entities(Vec2i gravity, uint32_t dt) {
+  for (int i = 0; i < entities_count; ++i) {
+    update_entity(&entities[i], gravity, dt);
+  }
+}
+
+// * Render all entities
+void render_entities(SDL_Renderer *renderer) {
+  for (int i = 0; i < entities_count; ++i) {
+    render_entity(renderer, entities[i]);
+  } 
 }

@@ -136,23 +136,27 @@ int main() {
       -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
       PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
 
-  Entity player = {};
-  player.texbox = texbox;
-  player.hitbox = hitbox;
+  int PLAYER_ENTITY_IDX = 0;
+  entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
+  entities[PLAYER_ENTITY_IDX].texbox = texbox;
+  entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
+  entities[PLAYER_ENTITY_IDX].idle = idle;
+  entities[PLAYER_ENTITY_IDX].walking = walking;
+  entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
 
-  player.idle = idle;
-  player.walking = walking;
-  player.current = &player.idle;
-
-  Entity supposed_enemy = {};
-  supposed_enemy.texbox = texbox;
-  supposed_enemy.hitbox = hitbox;
-  supposed_enemy.walking = walking;
-  supposed_enemy.idle = idle;
-  supposed_enemy.current = &supposed_enemy.idle;
-  static_assert(LEVEL_WIDTH >= 2);
-  supposed_enemy.pos = vec2(LEVEL_WIDTH - 2, 0) * TILE_SIZE;
-  supposed_enemy.dir = Entity_Dir::Left;
+  int ENEMY_COUNT = 4;
+  int ENEMY_ENTITY_IDX_OFFSET = 1;
+  for (int i = 0; i < ENEMY_COUNT; ++i) {
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox = hitbox;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
+    static_assert(LEVEL_WIDTH >= 2);
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
+  }
 
   stec(TTF_Init());
   const int DEBUG_FONT_SIZE = 18;
@@ -182,17 +186,21 @@ int main() {
         case SDL_KEYDOWN: {
           switch (event.key.keysym.sym) {
             case SDLK_SPACE: {
-              player.vel.y = -20;
+              entities[PLAYER_ENTITY_IDX].vel.y = -20;
             } break;
             case SDLK_q: {
               debug = !debug;
             } break;
             case SDLK_e: {
-              entity_shoot(&player);
+              entity_shoot(&entities[PLAYER_ENTITY_IDX]);
             } break;
             case SDLK_r: {
-              player.pos = vec2(0, 0);
-              player.vel.y = 0;
+              entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
+              entities[PLAYER_ENTITY_IDX].vel.y = 0;
+              for (int i = 0; i < ENEMY_COUNT; ++i) {
+                entities[ENEMY_ENTITY_IDX_OFFSET + i].pos.y = 0;
+                entities[ENEMY_ENTITY_IDX_OFFSET + i].vel.y = 0;
+              }
             } break;
           }
         } break;
@@ -235,7 +243,7 @@ int main() {
               }
               else {
                 state = Debug_Draw_State::Delete;
-                level[tile.y][tile.x] = Tile::Empty; 
+                level[tile.y][tile.x] = Tile::Empty;
               }
             }
           }
@@ -246,28 +254,28 @@ int main() {
       }
     }
 
-    // entity_move(&supposed_enemy, -1);
-    entity_shoot(&supposed_enemy);
+    for (int i = 0; i < ENEMY_COUNT; ++i) {
+      entity_shoot(&entities[ENEMY_ENTITY_IDX_OFFSET + i]);
+    }
     if(keyboard[SDL_SCANCODE_D]) {
-      entity_move(&player, PLAYER_SPEED);
+      entity_move(&entities[PLAYER_ENTITY_IDX], PLAYER_SPEED);
     } else if(keyboard[SDL_SCANCODE_A]) {
-      entity_move(&player, -PLAYER_SPEED);
+      entity_move(&entities[PLAYER_ENTITY_IDX], -PLAYER_SPEED);
     } else {
-      entity_stop(&player);
+      entity_stop(&entities[PLAYER_ENTITY_IDX]);
     }
 
     sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     sec(SDL_RenderClear(renderer));
 
     render_level(renderer, ground_grass_texture, ground_texture);
-    render_entity(renderer, player);
-    render_entity(renderer, supposed_enemy);
+    render_entities(renderer);
     render_projectiles(renderer);
 
     if(debug) {
       sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
 
-      auto dstrect = entity_dstrect(player);
+      auto dstrect = entity_dstrect(entities[PLAYER_ENTITY_IDX]);
       sec(SDL_RenderDrawRect(renderer, &dstrect));
 
       sec(SDL_RenderFillRect(renderer, &collision_probe));
@@ -284,7 +292,7 @@ int main() {
       displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 12), "Projectiles: %d", count_alive_projectiles());
 
       sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
-      auto hitbox = entity_hitbox(player);
+      auto hitbox = entity_hitbox(entities[PLAYER_ENTITY_IDX]);
       sec(SDL_RenderDrawRect(renderer, &hitbox));
     }
     
@@ -293,8 +301,7 @@ int main() {
     const Uint32 dt = SDL_GetTicks() - begin;
     // printf("%d\n", dt);
 
-    update_entity(&player, gravity, dt);
-    update_entity(&supposed_enemy, gravity, dt);
+    update_entities(gravity, dt);
     update_projectiles(dt);
   }
   SDL_Quit();

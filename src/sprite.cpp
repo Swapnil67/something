@@ -72,6 +72,7 @@ static inline void render_animation(
 }
 
 void update_animation(Animation *animation, uint32_t dt) {
+  assert(animation);
   if (dt < animation->frame_cooldown) {
     animation->frame_cooldown -= dt;
   } else {
