@@ -82,8 +82,8 @@ void update_animation(Animation *animation, uint32_t dt) {
   }
 }
 
-// * Create a image texture from png image
-SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *image_filename) {
+// * Creates SDL_Surface from png image
+SDL_Surface *load_png_file_as_surface(const char *image_filename) {
   // * Reading png into buffer
   png_image image;
   memset(&image, 0, sizeof(image));
@@ -110,7 +110,12 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
                                                               0x0000ff00,
                                                               0x00ff0000,
                                                               0xff000000));
+  return image_surface;
+}
 
+// * Create a image texture from png image
+SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *image_filename) {
+  SDL_Surface *image_surface = load_png_file_as_surface(image_filename);
   SDL_Texture *image_texture = sec(SDL_CreateTextureFromSurface(renderer, image_surface));
   SDL_FreeSurface(image_surface);
   return image_texture;
