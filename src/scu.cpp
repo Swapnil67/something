@@ -6,8 +6,15 @@
 #include<SDL_ttf.h>
 #include<SDL.h>
 
+template <typename T>
+T min(T a, T b) {
+  return a < b ? a : b;
+}
+
 // * Single Compilation Unit
 #include "./error.cpp"
+#include "./something_result.cpp"
+#include "./something_string_view.cpp"
 #include "./vec.cpp"
 #include "./sprite.cpp"
 #include "./level.cpp"

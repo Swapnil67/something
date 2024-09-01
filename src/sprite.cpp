@@ -3,7 +3,6 @@
 // * Sprite
 ////////////////////////////////////////////////
 
-
 struct Sprite {
   SDL_Rect srcrect;
   SDL_Texture *texture;
@@ -121,6 +120,12 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
   return image_texture;
 }
 
+SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, String_View<char> image_filename) {
+  char buffer[256] = {};
+  strncpy(buffer, image_filename.data, min(sizeof(buffer)-1, image_filename.count));
+  return load_texture_from_png_file(renderer, buffer);
+}
+
 Animation load_spritesheet_animation(
     SDL_Renderer *renderer,
     size_t frame_count,
@@ -144,4 +149,104 @@ Animation load_spritesheet_animation(
   }
 
   return result;
+}
+
+
+void dump_animation(Animation animation, const char *sprite_filename, FILE *output) {
+  fprintf(output, "sprite = %s\n", sprite_filename);
+  fprintf(output, "count = %lu\n", animation.frame_count);
+  fprintf(output, "duration = %u\n", animation.frame_duration);
+  fprintf(output, "\n");
+
+  for (size_t i = 0; i < animation.frame_count; ++i) {
+    fprintf(output, "frames.%lu.x = %d\n", i, animation.frames[i].srcrect.x);
+    fprintf(output, "frames.%lu.y = %d\n", i, animation.frames[i].srcrect.y);
+    fprintf(output, "frames.%lu.w = %d\n", i, animation.frames[i].srcrect.w);
+    fprintf(output, "frames.%lu.h = %d\n", i, animation.frames[i].srcrect.h);
+  }
+}
+
+Result<Animation, const char *> parse_animation(SDL_Renderer *renderer, String_View<char> input) {
+  Animation animation = {};
+  SDL_Texture *spritesheet_texture = nullptr;
+
+  while(input.count != 0) {
+    String_View<char> value = chop_by_delim(&input, '\n');
+    String_View<char> key = trim(chop_by_delim(&value, '='), isspace);
+
+    // * handle empty spaces & comments
+    if (key.count == 0 || *key.data == '#')
+      continue;
+
+    value = trim(value, isspace);
+
+    String_View<char> subkey = trim(chop_by_delim(&key, '.'), isspace);
+
+    if(subkey == "count") {
+
+      if(animation.frames != nullptr) {
+        return fail<Animation>("count provided twice.");
+      }
+
+      Result<size_t, void> count_result = as_number<size_t>(value);
+      if(count_result.is_error) {
+        return fail<Animation>("count is not a number.");
+      }
+      animation.frame_count = count_result.unwrap;
+      animation.frames = new Sprite[animation.frame_count];
+    }
+    else if(subkey == "sprite") {
+      spritesheet_texture = load_texture_from_png_file(renderer, value);
+    }
+    else if(subkey == "duration") {
+      Result<size_t, void> result = as_number<size_t>(value);
+      if(result.is_error) {
+        return fail<Animation>("duration is not a number");
+      }
+      animation.frame_duration = result.unwrap;
+    }
+    else if(subkey == "frames") {
+      Result<size_t, void> result = as_number<size_t>(trim(chop_by_delim<char>(&key, '.'), isspace));
+      if (result.is_error) {  
+        return fail<Animation>("incorrect frame index");
+      }
+      
+      size_t frame_index = result.unwrap;
+      if (frame_index >= animation.frame_count) {
+        return fail<Animation>("incorrect frame index");
+      }
+
+      animation.frames[frame_index].texture = spritesheet_texture; 
+
+      // * parse the subkeys
+      while(key.count) {
+        subkey = trim(chop_by_delim<char>(&key, '.'), isspace); 
+
+        if(key.count != 0) {
+          return fail<Animation>("unknown subkeys");
+        }
+
+        Result<int, void> result_value = as_number<int>(value);
+        if(result_value.is_error) {
+          return fail<Animation>("frame parameter is not a number");
+        }
+
+        if(subkey == "x") {
+          animation.frames[frame_index].srcrect.x = result_value.unwrap;
+        } else if(subkey == "y") {
+          animation.frames[frame_index].srcrect.y = result_value.unwrap;
+        } else if(subkey == "w") {
+          animation.frames[frame_index].srcrect.w = result_value.unwrap;
+        } else if(subkey == "h") {
+          animation.frames[frame_index].srcrect.h = result_value.unwrap;
+        } else {
+          return fail<Animation>("unknown subkeys"); 
+        }
+
+      }
+    }
+
+  }
+
+  return ok<Animation, const char *>(animation);
 }
