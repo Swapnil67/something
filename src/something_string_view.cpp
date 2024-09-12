@@ -78,6 +78,10 @@ struct String_View {
   }
 };
 
+void print1(FILE *stream, String_View view) {
+  fwrite(view.data, 1, view.count, stream);
+}
+
 String_View cstr_as_string_view(const char* cstr) {
   return String_View{strlen(cstr), cstr};
 }

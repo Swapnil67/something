@@ -131,7 +131,7 @@ Spritesheet spritesheets[] = {
     {"./assets/sprites/destroy-sheet.png", nullptr},
     {"./assets/sprites/fantasy_tiles.png", nullptr},
     {"./assets/sprites/spark-sheet.png", nullptr},
-    // {"./assets/sprites/walking-12px.png", nullptr},
+    {"./assets/sprites/walking-12px.png", nullptr},
 };
 
 void load_spritesheets(SDL_Renderer *renderer) {
@@ -148,7 +148,7 @@ SDL_Texture *spritesheet_by_name(String_View filename) {
       return spritesheets[i].texture; 
     }
   }
-  fprintf(stderr, "Unknown texture file %.*s.\nYou may want to add it to the spritesheet array.\n", (int)filename.count, filename.data);
+  println(stderr, "Unknown texture file `", filename, "`. ", "You may want to add it to the spritesheet array.");
   abort();
   return nullptr;
 }
