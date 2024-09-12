@@ -5,7 +5,7 @@ sdl-playground
 
 .DS_Store
 *.dSYM
-*.vscode
+# *.vscode
 
 
 collision_detection.md

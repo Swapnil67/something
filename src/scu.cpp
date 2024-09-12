@@ -1,10 +1,11 @@
 #include<cassert>
 #include<cstdio>
 #include<cstdlib>
+#include <cerrno>
 
 #include<png.h>
 #include<SDL_ttf.h>
-#include<SDL.h>
+#include<SDL2/SDL.h>
 
 template <typename T>
 T min(T a, T b) {

@@ -1,6 +1,6 @@
-sprite = ./assets/walking-12px.png
+sprite = ./assets/sprites/walking-12px.png
 count = 4
-duration = 150
+duration = 200
 
 frames.0.x = 0
 frames.0.y = 0

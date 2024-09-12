@@ -115,21 +115,22 @@ int main2() {
   printf("%zu\n", input.count);
     
   while(input.count != 0) {
-    auto value = chop_by_delim(&input, '\n');
-    auto key = trim(chop_by_delim(&value, '='), isspace);
+    auto value = input.chop_by_delim('\n');
+    // auto key = trim(chop_by_delim(&value, '='), isspace);
+    auto key = value.chop_by_delim('=').trim();
 
     // * handle empty spaces & comments
     if(key.count == 0 || *key.data == '#')
       continue;
 
-    value = trim(value, isspace);
+    value = value.trim();
 
     fputs("Key:\t", stdout);
     fputc('#', stdout);
 
     // * parse the subkeys
     while(key.count != 0) {
-      auto subkey = chop_by_delim(&key, '.');
+      auto subkey = key.chop_by_delim('.');
       fwrite(subkey.data, 1, subkey.count, stdout);
       fputc('#', stdout);
     }
@@ -159,7 +160,7 @@ int main() {
   SDL_Renderer *renderer = sec(SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED));
 
   // * Get tile texture from png
-  SDL_Texture *tileset_texture = load_texture_from_png_file(renderer, "assets/fantasy_tiles.png");
+  SDL_Texture *tileset_texture = load_texture_from_png_file(renderer, "assets/sprites/fantasy_tiles.png");
 
   Sprite ground_grass_texture = {
     .srcrect = {120, 128, 16, 16},
@@ -171,25 +172,27 @@ int main() {
     .texture = tileset_texture
   };
 
-  auto plasma_pop_animation = parse_animation(renderer, file_as_string_view("./plasma_pop.txt"));
-  auto plasma_bolt_animation = parse_animation(renderer, file_as_string_view("./plasma_bolt.txt"));
+  load_spritesheets(renderer);
 
-  init_projectiles(plasma_bolt_animation.unwrap, plasma_pop_animation.unwrap);
+  auto plasma_pop_animation = load_animation_file("./assets/animats/plasma_pop.txt");
+  auto plasma_bolt_animation = load_animation_file("./assets/animats/plasma_bolt.txt");
+  auto walking = load_animation_file("./assets/animats/walking.txt");
+  auto idle = load_animation_file("./assets/animats/idle.txt");
+
+  init_projectiles(plasma_bolt_animation, plasma_pop_animation);
 
   const int PLAYER_SPEED = 4;
 
-  // * Walking Animation
-  auto walking = parse_animation(renderer, file_as_string_view("./walking.txt"));
-  if(walking.is_error) {
-    fprintf(stderr, "Error while parsing walking.txt: %s\n", walking.error);
-    exit(1);
-  }
-  // * Idle Animation
-  auto idle = parse_animation(renderer, file_as_string_view("./idle.txt"));
-  if(idle.is_error) {
-    fprintf(stderr, "Error while parsing idle.txt: %s\n", idle.error);
-    exit(1);
-  }
+  // // * Walking Animation
+  // if(walking.is_error) {
+  //   fprintf(stderr, "Error while parsing walking.txt: %s\n", walking.error);
+  //   exit(1);
+  // }
+  // // * Idle Animation
+  // if(idle.is_error) {
+  //   fprintf(stderr, "Error while parsing idle.txt: %s\n", idle.error);
+  //   exit(1);
+  // }
 
   // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
@@ -207,8 +210,8 @@ int main() {
   entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
   entities[PLAYER_ENTITY_IDX].texbox = texbox;
   entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
-  entities[PLAYER_ENTITY_IDX].idle = idle.unwrap;
-  entities[PLAYER_ENTITY_IDX].walking = walking.unwrap;
+  entities[PLAYER_ENTITY_IDX].idle = idle;
+  entities[PLAYER_ENTITY_IDX].walking = walking;
   entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
 
   int ENEMY_COUNT = 1;
@@ -217,8 +220,8 @@ int main() {
     entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox = hitbox;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking.unwrap;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle.unwrap;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
     static_assert(LEVEL_WIDTH >= 2);
     entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;

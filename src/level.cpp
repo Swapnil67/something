@@ -6,6 +6,7 @@ enum class Tile {
   Wall
 };
 
+
 const int LEVEL_WIDTH = 10;
 const int LEVEL_HEIGHT = 10;
 const SDL_Rect level_boundary = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};

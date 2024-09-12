@@ -1,4 +1,4 @@
-sprite = ./assets/destroy-sheet.png
+sprite = ./assets/sprites/destroy-sheet.png
 count = 4
 duration = 70
 

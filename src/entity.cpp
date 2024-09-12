@@ -9,9 +9,8 @@ enum class Entity_State {
 };
 
 struct Entity {
-
   Entity_State state;
-
+  
   SDL_Rect texbox;
   SDL_Rect hitbox;
   Vec2i pos;

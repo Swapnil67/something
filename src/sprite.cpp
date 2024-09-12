@@ -8,6 +8,8 @@ struct Sprite {
   SDL_Texture *texture;
 };
 
+#define ARRAY_SIZE(xs) (sizeof(xs) / sizeof(xs[0]))
+
 void render_sprite(
     SDL_Renderer *renderer,
     Sprite texture,
@@ -120,10 +122,35 @@ SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, const char *imag
   return image_texture;
 }
 
-SDL_Texture *load_texture_from_png_file(SDL_Renderer *renderer, String_View<char> image_filename) {
-  char buffer[256] = {};
-  strncpy(buffer, image_filename.data, min(sizeof(buffer)-1, image_filename.count));
-  return load_texture_from_png_file(renderer, buffer);
+struct Spritesheet {
+  const char *filename;
+  SDL_Texture *texture;
+};
+
+Spritesheet spritesheets[] = {
+    {"./assets/sprites/destroy-sheet.png", nullptr},
+    {"./assets/sprites/fantasy_tiles.png", nullptr},
+    {"./assets/sprites/spark-sheet.png", nullptr},
+    // {"./assets/sprites/walking-12px.png", nullptr},
+};
+
+void load_spritesheets(SDL_Renderer *renderer) {
+  for (size_t i = 0; i < ARRAY_SIZE(spritesheets); ++i) {
+    if(spritesheets[i].texture == nullptr) {
+      spritesheets[i].texture = load_texture_from_png_file(renderer, spritesheets[i].filename);
+    }
+  }
+}
+
+SDL_Texture *spritesheet_by_name(String_View filename) {
+  for (size_t i = 0; i < ARRAY_SIZE(spritesheets); ++i) {
+    if(filename == cstr_as_string_view(spritesheets[i].filename)) {
+      return spritesheets[i].texture; 
+    }
+  }
+  fprintf(stderr, "Unknown texture file %.*s.\nYou may want to add it to the spritesheet array.\n", (int)filename.count, filename.data);
+  abort();
+  return nullptr;
 }
 
 Animation load_spritesheet_animation(
@@ -166,87 +193,132 @@ void dump_animation(Animation animation, const char *sprite_filename, FILE *outp
   }
 }
 
-Result<Animation, const char *> parse_animation(SDL_Renderer *renderer, String_View<char> input) {
+void abort_parse_error(FILE *stream,
+                       String_View source, String_View rest,
+                       const char *prefix, const char *error)
+{
+    assert(stream);
+    assert(source.data < rest.data);
+
+    size_t n = (size_t) (rest.data - source.data);
+
+    for (size_t line_number = 1; source.count; ++line_number) {
+        auto line = source.chop_by_delim('\n');
+
+        if (n <= line.count) {
+          fprintf(stream, "%s:%ld: %s\n", prefix, line_number, error);
+          fwrite(line.data, 1, line.count, stream);
+          fputc('\n', stream);
+
+          for (size_t j = 0; j < n; ++j) {
+            fputc(' ', stream);
+          }
+          fputc('^', stream);
+          fputc('\n', stream);
+          break;
+        }
+
+        n -= line.count + 1;
+    }
+
+    for (int i = 0; source.count && i < 3; ++i) {
+        auto line = source.chop_by_delim('\n');
+        fwrite(line.data, 1, line.count, stream);
+        fputc('\n', stream);
+    }
+
+    abort();
+}
+
+Animation load_animation_file(const char *animation_filepath)
+{
+  String_View source = file_as_string_view(animation_filepath);
+  String_View input = source;
   Animation animation = {};
   SDL_Texture *spritesheet_texture = nullptr;
 
   while(input.count != 0) {
-    String_View<char> value = chop_by_delim(&input, '\n');
-    String_View<char> key = trim(chop_by_delim(&value, '='), isspace);
+    auto value = input.chop_by_delim('\n');
+    auto key = value.chop_by_delim('=').trim();
 
     // * handle empty spaces & comments
     if (key.count == 0 || *key.data == '#')
       continue;
 
-    value = trim(value, isspace);
+    value = value.trim();
 
-    String_View<char> subkey = trim(chop_by_delim(&key, '.'), isspace);
+    // String_View subkey = trim(chop_by_delim(&key, '.'), isspace);
+    auto subkey = key.chop_by_delim('.').trim();
 
-    if(subkey == "count") {
-
+    if(subkey == "count"_sv) {
       if(animation.frames != nullptr) {
-        return fail<Animation>("count provided twice.");
+        abort_parse_error(stderr, source, input, animation_filepath, "`count` provided twice");
       }
 
-      Result<size_t, void> count_result = as_number<size_t>(value);
-      if(count_result.is_error) {
-        return fail<Animation>("count is not a number.");
+      auto count_result = value.as_integer<size_t>();
+      if(!count_result.has_value) {
+        abort_parse_error(stderr, source, input, animation_filepath, "`count` is not a number");
       }
       animation.frame_count = count_result.unwrap;
       animation.frames = new Sprite[animation.frame_count];
     }
-    else if(subkey == "sprite") {
-      spritesheet_texture = load_texture_from_png_file(renderer, value);
+    else if(subkey == "sprite"_sv) {
+      spritesheet_texture = spritesheet_by_name(value);
     }
-    else if(subkey == "duration") {
-      Result<size_t, void> result = as_number<size_t>(value);
-      if(result.is_error) {
-        return fail<Animation>("duration is not a number");
+    else if(subkey == "duration"_sv) {
+      auto result = value.as_integer<size_t>();
+      if(!result.has_value) {
+        abort_parse_error(stderr, source, input, animation_filepath, "duration is not a number");   
       }
       animation.frame_duration = result.unwrap;
     }
-    else if(subkey == "frames") {
-      Result<size_t, void> result = as_number<size_t>(trim(chop_by_delim<char>(&key, '.'), isspace));
-      if (result.is_error) {  
-        return fail<Animation>("incorrect frame index");
+    else if(subkey == "frames"_sv) {
+      // Result<size_t, void> result = as_number<size_t>(trim(chop_by_delim(&key, '.'), isspace));
+      auto result = key.chop_by_delim('.').trim().as_integer<size_t>();
+      if (!result.has_value) {  
+        abort_parse_error(stderr, source, input, animation_filepath, "frame index is not a number");   
       }
       
       size_t frame_index = result.unwrap;
       if (frame_index >= animation.frame_count) {
-        return fail<Animation>("incorrect frame index");
+        abort_parse_error(stderr, source, input, animation_filepath, "incorrect frame index");   
       }
 
       animation.frames[frame_index].texture = spritesheet_texture; 
 
       // * parse the subkeys
       while(key.count) {
-        subkey = trim(chop_by_delim<char>(&key, '.'), isspace); 
+        subkey = key.chop_by_delim('.').trim();
 
         if(key.count != 0) {
-          return fail<Animation>("unknown subkeys");
+          abort_parse_error(stderr, source, input, animation_filepath, "unknown subkey");   
         }
 
-        Result<int, void> result_value = as_number<int>(value);
-        if(result_value.is_error) {
-          return fail<Animation>("frame parameter is not a number");
+        auto result_value = value.as_integer<int>();
+        if(!result_value.has_value) {
+          abort_parse_error(stderr, source, input, animation_filepath, "frame parameter is not a number");   
         }
 
-        if(subkey == "x") {
+        if(subkey == "x"_sv) {
           animation.frames[frame_index].srcrect.x = result_value.unwrap;
-        } else if(subkey == "y") {
+        } else if(subkey == "y"_sv) {
           animation.frames[frame_index].srcrect.y = result_value.unwrap;
-        } else if(subkey == "w") {
+        } else if(subkey == "w"_sv) {
           animation.frames[frame_index].srcrect.w = result_value.unwrap;
-        } else if(subkey == "h") {
+        } else if(subkey == "h"_sv) {
           animation.frames[frame_index].srcrect.h = result_value.unwrap;
         } else {
-          return fail<Animation>("unknown subkeys"); 
+          abort_parse_error(stderr, source, input, animation_filepath, "unknown subkey");
         }
-
       }
+    } else {
+      abort_parse_error(stderr, source, input, animation_filepath, "unknown subkey");
     }
 
   }
 
-  return ok<Animation, const char *>(animation);
+  delete[] source.data;
+
+  // return ok<Animation, const char *>(animation);
+  return animation;
 }
