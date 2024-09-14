@@ -117,7 +117,6 @@ int main2() {
     
   while(input.count != 0) {
     auto value = input.chop_by_delim('\n');
-    // auto key = trim(chop_by_delim(&value, '='), isspace);
     auto key = value.chop_by_delim('=').trim();
 
     // * handle empty spaces & comments
@@ -183,17 +182,6 @@ int main() {
   init_projectiles(plasma_bolt_animation, plasma_pop_animation);
 
   const int PLAYER_SPEED = 4;
-
-  // // * Walking Animation
-  // if(walking.is_error) {
-  //   fprintf(stderr, "Error while parsing walking.txt: %s\n", walking.error);
-  //   exit(1);
-  // }
-  // // * Idle Animation
-  // if(idle.is_error) {
-  //   fprintf(stderr, "Error while parsing idle.txt: %s\n", idle.error);
-  //   exit(1);
-  // }
 
   // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
