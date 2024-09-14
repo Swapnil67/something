@@ -53,22 +53,22 @@ void render_level(SDL_Renderer *renderer, Sprite top_ground_texture, Sprite bott
   }
 }
 
-void dump_level() {
-  std::printf("{\n");
+void dump_level(FILE *stream) {
+  println(stream, "{");
   for (int y = 0; y < LEVEL_HEIGHT; ++y) {
-    std::printf("{");
+    print(stream, "{");
     for (int x = 0; x < LEVEL_WIDTH; ++x) {
       switch(level[y][x]) {
         case Tile::Empty: {
-          std::printf("Tile::Empty, ");
+          print(stream, "Tile::Empty, ");
         } break;
         case Tile::Wall: {
-          std::printf("Tile::Wall, ");
+          print(stream, "Tile::Wall, ");
         } break;
       }
     }
-    std::printf("},");
-    std::printf("\n");
+    print(stream, "},");
+    println(stream, "\n");
   }
-  std::printf("};\n");
+  println(stream, "};\n");
 }

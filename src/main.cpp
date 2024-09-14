@@ -41,6 +41,7 @@ void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int
   }
 }
 
+// TODO: Turn displayf into println style
 void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2i p, const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -375,8 +376,8 @@ int main() {
     update_projectiles(dt);
   }
   SDL_Quit();
-  // dump_level();
-  // dump_animation(player_idle, "./assets/walking-12px.png", stdout);
+  // dump_level(stdout);
+  // dump_animation(walking, "sdf", stdout);
   return 0;
 }
 
