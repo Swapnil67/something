@@ -56,11 +56,6 @@ void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2i p, 
   va_end(args);
 }
 
-enum class Debug_Draw_State {
-  Idle,
-  Create,
-  Delete
-};
 
 struct RGBA32 {
   uint8_t r,g,b,a;
@@ -107,47 +102,105 @@ void enemy_spritesheet(SDL_Surface *spritesheet_surface) {
   }
 }
 
-int main2() {
-  auto input =  "    foo.bar.baz.hello.world = 67  \n"
-                "   foo.bar.baz.hello.world = 67\n"
-                "   \n"
-                "    foo.bar.baz.hello.world = 67\n"_sv;
-                
-  printf("%zu\n", input.count);
-    
-  while(input.count != 0) {
-    auto value = input.chop_by_delim('\n');
-    auto key = value.chop_by_delim('=').trim();
+enum class Debug_Draw_State {
+  Idle = 0,
+  Create,
+  Delete
+};
 
-    // * handle empty spaces & comments
-    if(key.count == 0 || *key.data == '#')
+struct Game_State {
+  Vec2i gravity;
+  bool quit;
+  Vec2i collision_probe;
+  Vec2i mouse_position;
+  Debug_Draw_State state;
+
+  TTF_Font *debug_font;
+
+  Sprite ground_grass_texture;
+  Sprite ground_texture;
+};
+
+const int ENEMY_COUNT = 4;
+const int ENEMY_ENTITY_IDX_OFFSET = 1;
+const int PLAYER_ENTITY_IDX = 0;
+const int PLAYER_SPEED = 4;
+
+void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer) {
+  sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
+
+  const int COLLISION_PROBE_SIZE = 10;
+  const SDL_Rect collision_probe_rect = {
+    game_state.collision_probe.x - COLLISION_PROBE_SIZE,
+    game_state.collision_probe.y - COLLISION_PROBE_SIZE,
+    COLLISION_PROBE_SIZE * 2,
+    COLLISION_PROBE_SIZE * 2,
+  };
+  sec(SDL_RenderFillRect(renderer, &collision_probe_rect));
+
+  const SDL_Rect tile_rect = {
+    game_state.mouse_position.x / TILE_SIZE * TILE_SIZE,
+    game_state.mouse_position.y / TILE_SIZE * TILE_SIZE,
+    TILE_SIZE, TILE_SIZE
+  };
+  sec(SDL_RenderDrawRect(renderer, &tile_rect));
+
+  // * Level Boundary
+  const SDL_Rect level_boundary = {
+    0, 0, LEVEL_WIDTH * TILE_SIZE, LEVEL_HEIGHT * TILE_SIZE
+  };
+  sec(SDL_RenderDrawRect(renderer, &level_boundary));
+
+  const int PADDING = 10;
+  // TODO fps rendering is broken
+  // const Uint32 fps = dt ? 1000 / dt : 0;
+  // displayf(renderer, game_state.debug_font,
+  //          {255, 0, 0, 255}, vec2(PADDING, PADDING),
+  //          "FPS: %d", fps);
+  displayf(renderer, game_state.debug_font,
+           {255, 0, 0, 255}, vec2(PADDING, PADDING * 4),
+           "Mouse Position (%d, %d)",
+           game_state.mouse_position.x, game_state.mouse_position.y);
+  displayf(renderer, game_state.debug_font,
+           {255, 0, 0, 255}, vec2(PADDING, PADDING * 8),
+           "Collision Porbe (%d, %d)",
+           game_state.collision_probe.x, game_state.collision_probe.y);
+  displayf(renderer, game_state.debug_font,
+           {255, 0, 0, 255}, vec2(PADDING, PADDING * 12),
+           "Projectiles: %d", count_alive_projectiles());
+
+  for (size_t i = 0; i < entities_count; ++i) {
+    if (entities[i].state == Entity_State::Ded)
       continue;
+    sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
+    auto dstrect = entity_dstrect(entities[i]);
+    sec(SDL_RenderDrawRect(renderer, &dstrect));
 
-    value = value.trim();
-
-    fputs("Key:\t", stdout);
-    fputc('#', stdout);
-
-    // * parse the subkeys
-    while(key.count != 0) {
-      auto subkey = key.chop_by_delim('.');
-      fwrite(subkey.data, 1, subkey.count, stdout);
-      fputc('#', stdout);
-    }
-
-    // fwrite(key.data, 1, key.count, stdout);
-    fputc('#', stdout);
-    fputc('\n', stdout);
-
-    // printf("%zu\n", value.count);
-
-    fputs("Value:\t", stdout);
-    fputc('#', stdout);
-    fwrite(value.data, 1, value.count, stdout);
-    fputc('#', stdout);
-    fputc('\n', stdout);
+    sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
+    auto hitbox = entity_hitbox(entities[i]);
+    sec(SDL_RenderDrawRect(renderer, &hitbox));
   }
-  return 0;
+
+}
+
+void render_game_state(const Game_State game_state,
+                  SDL_Renderer *renderer)
+{
+  sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
+  sec(SDL_RenderClear(renderer));
+
+  render_level(renderer, game_state.ground_grass_texture, game_state.ground_texture);
+  render_entities(renderer);
+  render_projectiles(renderer);
+}
+
+void update_game_state(const Game_State game_state, Uint32 dt) {
+  for (int i = 0; i < ENEMY_COUNT; ++i) {
+    entity_shoot(&entities[ENEMY_ENTITY_IDX_OFFSET + i]);
+  }
+
+  update_entities(game_state.gravity, dt);
+  update_projectiles(dt);
 }
 
 int main() {
@@ -162,15 +215,6 @@ int main() {
   // * Get tile texture from png
   SDL_Texture *tileset_texture = load_texture_from_png_file(renderer, "assets/sprites/fantasy_tiles.png");
 
-  Sprite ground_grass_texture = {
-    .srcrect = {120, 128, 16, 16},
-    .texture = tileset_texture
-  };
-
-  Sprite ground_texture = {
-    .srcrect = {120, 128 + 16, 16, 16},
-    .texture = tileset_texture
-  };
 
   load_spritesheets(renderer);
 
@@ -180,8 +224,6 @@ int main() {
   auto idle = load_animation_file("./assets/animats/idle.txt");
 
   init_projectiles(plasma_bolt_animation, plasma_pop_animation);
-
-  const int PLAYER_SPEED = 4;
 
   // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
@@ -195,7 +237,6 @@ int main() {
       -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
       PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
 
-  int PLAYER_ENTITY_IDX = 0;
   entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
   entities[PLAYER_ENTITY_IDX].texbox = texbox;
   entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
@@ -203,8 +244,6 @@ int main() {
   entities[PLAYER_ENTITY_IDX].walking = walking;
   entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
 
-  int ENEMY_COUNT = 1;
-  int ENEMY_ENTITY_IDX_OFFSET = 1;
   for (int i = 0; i < ENEMY_COUNT; ++i) {
     entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
@@ -219,28 +258,31 @@ int main() {
 
   stec(TTF_Init());
   const int DEBUG_FONT_SIZE = 18;
-  TTF_Font *debug_font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", DEBUG_FONT_SIZE));
 
-  Vec2i gravity = {0, 1};
-  bool quit = false;
-  bool debug = false;
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
 
-  const int COLLISION_PROBE_SIZE = 10;
-  SDL_Rect collision_probe = {};
-  Vec2i mouse_position = {};
-  SDL_Rect tile_rect = {};
-  Debug_Draw_State state = Debug_Draw_State::Idle;
+  Game_State game_state = {};
+  game_state.gravity = {0, 1};
+  game_state.debug_font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", DEBUG_FONT_SIZE));
+  game_state.ground_grass_texture = {
+    .srcrect = {120, 128, 16, 16},
+    .texture = tileset_texture
+  };
+  game_state.ground_texture = {
+    .srcrect = {120, 128 + 16, 16, 16},
+    .texture = tileset_texture
+  };
 
-  Uint32 fps = 0;
-  while (!quit) {
+  bool debug = false;
+  bool step_debug = false;
+  while (!game_state.quit) {
     const Uint32 begin = SDL_GetTicks();
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
         case SDL_QUIT: {
-          quit = true;
+          game_state.quit = true;
         } break;
         case SDL_KEYDOWN: {
           switch (event.key.keysym.sym) {
@@ -249,6 +291,15 @@ int main() {
             } break;
             case SDLK_q: {
               debug = !debug;
+            } break;
+            case SDLK_z: {
+              step_debug = !step_debug;
+            } break;
+            case SDLK_x: {
+              if(step_debug) {
+                const uint32_t FPS = 60;
+                update_game_state(game_state, 1000 / FPS);
+              }
             } break;
             case SDLK_e: {
               entity_shoot(&entities[PLAYER_ENTITY_IDX]);
@@ -264,22 +315,12 @@ int main() {
           }
         } break;
         case SDL_MOUSEMOTION: {
-          Vec2i p = {event.motion.x, event.motion.y};
-          resolve_point_collision(&p);
-          collision_probe = {
-              p.x - COLLISION_PROBE_SIZE,
-              p.y - COLLISION_PROBE_SIZE,
-              COLLISION_PROBE_SIZE * 2,
-              COLLISION_PROBE_SIZE * 2};
-          tile_rect = {
-              event.motion.x / TILE_SIZE * TILE_SIZE,
-              event.motion.y / TILE_SIZE * TILE_SIZE,
-              TILE_SIZE,
-              TILE_SIZE};
-          mouse_position = {event.motion.x, event.motion.y};
+          game_state.mouse_position = {event.motion.x, event.motion.y};
+          game_state.collision_probe = game_state.mouse_position;
+          resolve_point_collision(&game_state.collision_probe);
 
           Vec2i tile = vec2(event.button.x, event.button.y) / TILE_SIZE;
-          switch(state) {
+          switch(game_state.state) {
             case Debug_Draw_State::Create: {
               if (is_tile_inbounds(tile))
                 level[tile.y][tile.x] = Tile::Wall; 
@@ -297,71 +338,42 @@ int main() {
             Vec2i tile = vec2(event.button.x, event.button.y) / TILE_SIZE;
             if(is_tile_inbounds(tile)) {
               if(level[tile.y][tile.x] == Tile::Empty) {
-                state = Debug_Draw_State::Create;
+                game_state.state = Debug_Draw_State::Create;
                 level[tile.y][tile.x] = Tile::Wall; 
               }
               else {
-                state = Debug_Draw_State::Delete;
+                game_state.state = Debug_Draw_State::Delete;
                 level[tile.y][tile.x] = Tile::Empty;
               }
             }
           }
         } break;
         case SDL_MOUSEBUTTONUP: {
-          state = Debug_Draw_State::Idle;
+          game_state.state = Debug_Draw_State::Idle;
         } break;
       }
     }
 
-    for (int i = 0; i < ENEMY_COUNT; ++i) {
-      entity_shoot(&entities[ENEMY_ENTITY_IDX_OFFSET + i]);
-    }
-    if(keyboard[SDL_SCANCODE_D]) {
+    if (keyboard[SDL_SCANCODE_D]) {
       entity_move(&entities[PLAYER_ENTITY_IDX], PLAYER_SPEED);
-    } else if(keyboard[SDL_SCANCODE_A]) {
+    } else if (keyboard[SDL_SCANCODE_A]) {
       entity_move(&entities[PLAYER_ENTITY_IDX], -PLAYER_SPEED);
     } else {
       entity_stop(&entities[PLAYER_ENTITY_IDX]);
     }
 
-    sec(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
-    sec(SDL_RenderClear(renderer));
-
-    render_level(renderer, ground_grass_texture, ground_texture);
-    render_entities(renderer);
-    render_projectiles(renderer);
-
+    // * render the current state
+    render_game_state(game_state, renderer);
     if(debug) {
-      sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
-
-      auto dstrect = entity_dstrect(entities[PLAYER_ENTITY_IDX]);
-      sec(SDL_RenderDrawRect(renderer, &dstrect));
-
-      sec(SDL_RenderFillRect(renderer, &collision_probe));
-      sec(SDL_RenderDrawRect(renderer, &tile_rect));
-      sec(SDL_RenderDrawRect(renderer, &level_boundary));
-
-      const Uint32 t = SDL_GetTicks() - begin;
-      const Uint32 fps_snapshot = t ? 1000 / t : 0;
-      fps = (fps + fps_snapshot) / 2;
-      const int PADDING = 10;
-      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING), "FPS: %d", fps);
-      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 4), "Mouse Position (%d, %d)", mouse_position.x, mouse_position.y);
-      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 8), "Collision Porbe (%d, %d)", collision_probe.x, collision_probe.y);
-      displayf(renderer, debug_font, {255, 0, 0, 255}, vec2(PADDING, PADDING * 12), "Projectiles: %d", count_alive_projectiles());
-
-      sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
-      auto hitbox = entity_hitbox(entities[PLAYER_ENTITY_IDX]);
-      sec(SDL_RenderDrawRect(renderer, &hitbox));
+      render_debug_overlay(game_state, renderer);
     }
-    
     SDL_RenderPresent(renderer);
 
-    const Uint32 dt = SDL_GetTicks() - begin;
-    // printf("%d\n", dt);
-
-    update_entities(gravity, dt);
-    update_projectiles(dt);
+    // * calculate the next state
+    if(!step_debug) {
+      const Uint32 dt = SDL_GetTicks() - begin;
+      update_game_state(game_state, dt);
+    }
   }
   SDL_Quit();
   // dump_level(stdout);
