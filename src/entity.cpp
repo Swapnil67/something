@@ -191,8 +191,11 @@ const int ENTITY_WEAPON_COOLDOWN = 30;
 
 void entity_shoot(int entity_index) {
   assert(0 <= entity_index);
-  assert(entity_index <= ENTITIES_COUNT);
+  assert(entity_index < ENTITIES_COUNT);
   Entity *entity = &entities[entity_index];
+
+  if (entity->state == Entity_State::Ded)
+    return;
   if (entity->cooldown_weapon > 0)
     return;
   if (entity->dir == Entity_Dir::Right) {
