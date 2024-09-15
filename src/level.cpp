@@ -35,8 +35,8 @@ bool is_tile_empty(Vec2i p) {
   return !is_tile_inbounds(p) || level[p.y][p.x] == Tile::Empty;
 }
 
-void render_level(SDL_Renderer *renderer, Sprite top_ground_texture, Sprite bottom_ground_texture) {
-  for (int y = 0; y < LEVEL_HEIGHT; ++y) {
+void render_level(Camera camera, SDL_Renderer *renderer, Sprite top_ground_texture, Sprite bottom_ground_texture) {
+    for (int y = 0; y < LEVEL_HEIGHT; ++y) {
     for (int x = 0; x < LEVEL_WIDTH; ++x) {
       switch (level[y][x]) {
         case Tile::Empty: {
@@ -44,11 +44,15 @@ void render_level(SDL_Renderer *renderer, Sprite top_ground_texture, Sprite bott
         } break;
         case Tile::Wall: {
           if (is_tile_empty(vec2(x, y - 1))) {
-            SDL_Rect destrect = {x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE};
+            SDL_Rect destrect = {x * TILE_SIZE - camera.pos.x,
+                                 y * TILE_SIZE - camera.pos.y,
+                                 TILE_SIZE, TILE_SIZE};
             render_sprite(renderer, top_ground_texture, destrect);
           }
           else {
-            SDL_Rect destrect = {x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE};
+            SDL_Rect destrect = {x * TILE_SIZE - camera.pos.x,
+                                 y * TILE_SIZE - camera.pos.y,
+                                 TILE_SIZE, TILE_SIZE};
             render_sprite(renderer, bottom_ground_texture, destrect);
           }
         }

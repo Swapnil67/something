@@ -60,20 +60,20 @@ void spwan_projectiles(Vec2i pos, Vec2i vel, int shooter_entity) {
   } 
 }
 
-void render_projectiles(SDL_Renderer *renderer) {
+void render_projectiles(Camera camera, SDL_Renderer *renderer) {
   for (size_t i = 0; i < projectiles_count; ++i) {
     switch (projectiles[i].state) {
       case Projectile_State::Active: {
         render_animation(
             renderer,
             projectiles[i].active_animation,
-            projectiles[i].pos);
+            projectiles[i].pos - camera.pos);
       } break;
       case Projectile_State::Poof: {
         render_animation(
             renderer,
             projectiles[i].poof_animation,
-            projectiles[i].pos);
+            projectiles[i].pos - camera.pos);
       } break;
       case Projectile_State::Ded: {
       } break;

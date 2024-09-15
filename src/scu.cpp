@@ -51,12 +51,16 @@ void println(FILE *stream, T... args) {
   fputc('\n', stream);
 }
 
-
 // * Single Compilation Unit
 #include "./error.cpp"
+#include "./math.cpp"
+
+struct Camera {
+  Vec2i pos;
+};
+
 #include "./something_result.cpp"
 #include "./something_string_view.cpp"
-#include "./math.cpp"
 #include "./sprite.cpp"
 #include "./level.cpp"
 #include "./projectile.cpp"
