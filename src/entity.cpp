@@ -128,15 +128,13 @@ void resolve_entity_collision(Entity *entity) {
 } 
 
 SDL_Rect entity_dstrect(const Entity entity) {
-  SDL_Rect dstrect = {
+  return SDL_Rect{
       entity.texbox.x + entity.pos.x, entity.texbox.y + entity.pos.y, entity.texbox.w, entity.texbox.h};
-  return dstrect;
 }
 
 SDL_Rect entity_hitbox(const Entity entity) {
-  SDL_Rect hitbox = {
+  return SDL_Rect{
       entity.hitbox.x + entity.pos.x, entity.hitbox.y + entity.pos.y, entity.hitbox.w, entity.hitbox.h};
-  return hitbox;
 }
 
 void render_entity(SDL_Renderer *renderer, const Entity entity) {
