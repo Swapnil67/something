@@ -19,9 +19,10 @@ const char* projectile_state_as_cstr(Projectile_State state) {
 }
 
 struct Projectile {
-  Projectile_State state;
   Vec2i pos;
   Vec2i vel;
+  int shooter_entity;
+  Projectile_State state;
   Animation active_animation;
   Animation poof_animation;
 };
@@ -46,13 +47,14 @@ int count_alive_projectiles(void) {
   return res;
 }
 
-void spwan_projectiles(Vec2i pos, Vec2i vel) {
+void spwan_projectiles(Vec2i pos, Vec2i vel, int shooter_entity) {
    for (size_t i = 0; i < projectiles_count; ++i) {
     // * Find the first one which is in ded state & activate it & return.
     if(projectiles[i].state == Projectile_State::Ded) {
       projectiles[i].state = Projectile_State::Active;
       projectiles[i].pos = pos;
       projectiles[i].vel = vel;
+      projectiles[i].shooter_entity = shooter_entity;
       return; 
     }
   } 
@@ -86,7 +88,6 @@ void update_projectiles(uint32_t dt) {
         update_animation(&projectiles[i].active_animation, dt);
         projectiles[i].pos += projectiles[i].vel;
         auto projectile_tile = projectiles[i].pos / TILE_SIZE;
-        // printf("Pos %d %d\n", projectile_tile.x, projectile_tile.y);
         if (!is_tile_empty(projectile_tile) ||
             !rect_contains_vec2i(LEVEL_BOUNDARY, projectiles[i].pos))
         {

@@ -167,18 +167,22 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer, Uint32 
     int SECOND_COLUMN_OFFSET = 400;
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, PADDING),
-             "State %s", projectile_state_as_cstr(projectile.state));
+             "State: %s", projectile_state_as_cstr(projectile.state));
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 + PADDING),
-             "Position (%d, %d)", projectile.pos.x, projectile.pos.y);
+             "Position: (%d, %d)", projectile.pos.x, projectile.pos.y);
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 * 2 + PADDING),
-             "Velocity (%d %d)", projectile.vel.x, projectile.vel.y);
+             "Velocity: (%d %d)", projectile.vel.x, projectile.vel.y);
+
+    displayf(renderer, game_state.debug_font,
+             {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 * 3 + PADDING),
+             "Shooter Index: %d", projectile.shooter_entity);
   }
 
-  for (size_t i = 0; i < entities_count; ++i) {
+  for (size_t i = 0; i < ENTITIES_COUNT; ++i) {
     if (entities[i].state == Entity_State::Ded)
       continue;
     sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
@@ -231,7 +235,7 @@ void render_game_state(const Game_State game_state,
 
 void update_game_state(const Game_State game_state, Uint32 dt) {
   for (int i = 0; i < ENEMY_COUNT; ++i) {
-    entity_shoot(&entities[ENEMY_ENTITY_IDX_OFFSET + i]);
+    entity_shoot(ENEMY_ENTITY_IDX_OFFSET + i);
   }
 
   update_entities(game_state.gravity, dt);
@@ -339,7 +343,7 @@ int main() {
               }
             } break;
             case SDLK_e: {
-              entity_shoot(&entities[PLAYER_ENTITY_IDX]);
+              entity_shoot(PLAYER_ENTITY_IDX);
             } break;
             case SDLK_r: {
               entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);

@@ -24,6 +24,10 @@ struct Entity {
   int cooldown_weapon;
 };
 
+const int ENTITIES_COUNT = 69;
+Entity entities[ENTITIES_COUNT];
+
+
 void resolve_point_collision(Vec2i *p) {
   assert(p);
 
@@ -187,31 +191,30 @@ void entity_stop(Entity *entity) {
 
 const int ENTITY_WEAPON_COOLDOWN = 30;
 
-void entity_shoot(Entity *entity) {
-  assert(entity);
+void entity_shoot(int entity_index) {
+  assert(0 <= entity_index);
+  assert(entity_index <= ENTITIES_COUNT);
+  Entity *entity = &entities[entity_index];
   if (entity->cooldown_weapon > 0)
     return;
   if (entity->dir == Entity_Dir::Right) {
-    spwan_projectiles(entity->pos, vec2(10, 0));
+    spwan_projectiles(entity->pos, vec2(10, 0), entity_index);
   } else {
-    spwan_projectiles(entity->pos, vec2(-10, 0));
+    spwan_projectiles(entity->pos, vec2(-10, 0), entity_index);
   }
   entity->cooldown_weapon = ENTITY_WEAPON_COOLDOWN;
 }
 
-const int entities_count = 69;
-Entity entities[entities_count];
-
 // * update all entities
 void update_entities(Vec2i gravity, uint32_t dt) {
-  for (int i = 0; i < entities_count; ++i) {
+  for (int i = 0; i < ENTITIES_COUNT; ++i) {
     update_entity(&entities[i], gravity, dt);
   }
 }
 
 // * Render all entities
 void render_entities(SDL_Renderer *renderer) {
-  for (int i = 0; i < entities_count; ++i) {
+  for (int i = 0; i < ENTITIES_COUNT; ++i) {
     render_entity(renderer, entities[i]);
   } 
 }
