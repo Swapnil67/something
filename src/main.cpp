@@ -265,6 +265,43 @@ void update_game_state(const Game_State game_state, Uint32 dt) {
 }
 
 const uint32_t STEP_DEBUG_FPS = 60;
+
+void init_entities(Animation walking, Animation idle) {
+    // * Entity
+  const int PLAYER_TEXBOX_SIZE = 48;
+  const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
+  SDL_Rect texbox = {
+      -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
+      PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
+  // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
+ 
+  SDL_Rect hitbox = {
+      -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
+      PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
+
+  memset(entities + PLAYER_ENTITY_IDX, 0, sizeof(Entity));
+  entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
+  entities[PLAYER_ENTITY_IDX].texbox = texbox;
+  entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
+  entities[PLAYER_ENTITY_IDX].idle = idle;
+  entities[PLAYER_ENTITY_IDX].walking = walking;
+  entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
+
+  for (int i = 0; i < ENEMY_COUNT; ++i) {
+    memset(entities + ENEMY_ENTITY_IDX_OFFSET + i, 0, sizeof(Entity));
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox = hitbox;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
+    static_assert(LEVEL_WIDTH >= 2);
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
+  }
+
+}
+
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
 
@@ -285,38 +322,9 @@ int main() {
   auto walking = load_animation_file("./assets/animats/walking.txt");
   auto idle = load_animation_file("./assets/animats/idle.txt");
 
+  init_entities(walking, idle);
   init_projectiles(plasma_bolt_animation, plasma_pop_animation);
 
-  // * Entity
-  const int PLAYER_TEXBOX_SIZE = 48;
-  const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
-  SDL_Rect texbox = {
-      -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
-      PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
-  // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
- 
-  SDL_Rect hitbox = {
-      -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
-      PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
-
-  entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
-  entities[PLAYER_ENTITY_IDX].texbox = texbox;
-  entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
-  entities[PLAYER_ENTITY_IDX].idle = idle;
-  entities[PLAYER_ENTITY_IDX].walking = walking;
-  entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
-
-  for (int i = 0; i < ENEMY_COUNT; ++i) {
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox = hitbox;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
-    static_assert(LEVEL_WIDTH >= 2);
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
-  }
 
   stec(TTF_Init());
   const int DEBUG_FONT_SIZE = 18;
@@ -368,12 +376,13 @@ int main() {
               entity_shoot(PLAYER_ENTITY_IDX);
             } break;
             case SDLK_r: {
-              entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
-              entities[PLAYER_ENTITY_IDX].vel.y = 0;
-              for (int i = 0; i < ENEMY_COUNT; ++i) {
-                entities[ENEMY_ENTITY_IDX_OFFSET + i].pos.y = 0;
-                entities[ENEMY_ENTITY_IDX_OFFSET + i].vel.y = 0;
-              }
+              init_entities(walking, idle);
+              // entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
+              // entities[PLAYER_ENTITY_IDX].vel.y = 0;
+              // for (int i = 0; i < ENEMY_COUNT; ++i) {
+              //   entities[ENEMY_ENTITY_IDX_OFFSET + i].pos.y = 0;
+              //   entities[ENEMY_ENTITY_IDX_OFFSET + i].vel.y = 0;
+              // }
             } break;
           }
         } break;
