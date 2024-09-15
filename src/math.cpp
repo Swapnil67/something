@@ -52,25 +52,22 @@ bool rect_contains_vec2i(SDL_Rect rect, Vec2i point) {
 ////////////////////////////
 
 template <typename T>
-Vec2<T> operator+(Vec2<T> a, T b) { return {a.x + b, a.y + b}; }
+Vec2<T> constexpr operator+(Vec2<T> a, T b) { return {a.x + b, a.y + b}; }
+template <typename T>
+Vec2<T> constexpr operator-(Vec2<T> a, T b) { return {a.x - b, a.y - b}; }
+template <typename T>
+Vec2<T> constexpr operator*(Vec2<T> a, T b) { return {a.x * b, a.y * b}; }
+template <typename T>
+Vec2<T> constexpr operator/(Vec2<T> a, T b) { return {a.x / b, a.y / b}; }
 
 template <typename T>
-Vec2<T> operator-(Vec2<T> a, T b) { return {a.x - b, a.y - b}; }
-
+Vec2<T> constexpr &operator+=(Vec2<T> &a, T b) { a = a + b; return a; }
 template <typename T>
-Vec2<T> operator*(Vec2<T> a, T b) { return {a.x * b, a.y * b}; }
-
+Vec2<T> constexpr &operator-=(Vec2<T> &a, T b) { a = a - b; return a; }
 template <typename T>
-Vec2<T> operator/(Vec2<T> a, T b) { return {a.x / b, a.y / b}; }
-
+Vec2<T> constexpr &operator*=(Vec2<T> &a, T b) { a = a * b; return a; }
 template <typename T>
-Vec2<T> &operator+=(Vec2<T> &a, T b) { a = a + b; return a; }
-template <typename T>
-Vec2<T> &operator-=(Vec2<T> &a, T b) { a = a - b; return a; }
-template <typename T>
-Vec2<T> &operator*=(Vec2<T> &a, T b) { a = a * b; return a; }
-template <typename T>
-Vec2<T> &operator/=(Vec2<T> &a, T b) { a = a / b; return a; }
+Vec2<T> constexpr &operator/=(Vec2<T> &a, T b) { a = a / b; return a; }
 
 
 ////////////////////////////
@@ -78,27 +75,30 @@ Vec2<T> &operator/=(Vec2<T> &a, T b) { a = a / b; return a; }
 ////////////////////////////
 
 template <typename T>
-Vec2<T> operator+(T a, Vec2<T> b) { return {a + b.x, a + b.y}; }
+Vec2<T> constexpr operator+(T a, Vec2<T> b) { return {a + b.x, a + b.y}; }
+template <typename T>
+Vec2<T> constexpr operator-(T a, Vec2<T> b) { return {a - b.x, a - b.y}; }
+template <typename T>
+Vec2<T> constexpr operator*(T a, Vec2<T> b) { return {a * b.x, a * b.y}; }
+template <typename T>
+Vec2<T> constexpr operator/(T a, Vec2<T> b) { return {a / b.x, a / b.y}; }
 
 template <typename T>
-Vec2<T> operator-(T a, Vec2<T> b) { return {a - b.x, a - b.y}; }
+Vec2<T> constexpr &operator+=(T &a, Vec2<T> b) { a = a + b; return a; }
+template <typename T>
+Vec2<T> constexpr &operator-=(T &a, Vec2<T> b) { a = a - b; return a; }
+template <typename T>
+Vec2<T> constexpr &operator*=(T &a, Vec2<T> b) { a = a * b; return a; }
+template <typename T>
+Vec2<T> constexpr &operator/=(T &a, Vec2<T> b) { a = a / b; return a; }
+
+
+////////////////////////////
+// * Just Vector
+////////////////////////////
 
 template <typename T>
-Vec2<T> operator*(T a, Vec2<T> b) { return {a * b.x, a * b.y}; }
-
-template <typename T>
-Vec2<T> operator/(T a, Vec2<T> b) { return {a / b.x, a / b.y}; }
-
-
-template <typename T>
-Vec2<T> &operator+=(T &a, Vec2<T> b) { a = a + b; return a; }
-template <typename T>
-Vec2<T> &operator-=(T &a, Vec2<T> b) { a = a - b; return a; }
-template <typename T>
-Vec2<T> &operator*=(T &a, Vec2<T> b) { a = a * b; return a; }
-template <typename T>
-Vec2<T> &operator/=(T &a, Vec2<T> b) { a = a / b; return a; }
-
+Vec2<T> constexpr operator-(Vec2<T> a) { return {-a.x, -a.y}; }
 
 ////////////////////////////
 // * Algorithms
