@@ -6,8 +6,8 @@
                 "${workspaceFolder}/src/**",
                 "${workspaceFolder}/**",
                 "/opt/homebrew/include/**",
+                "/opt/homebrew/include/SDL2/**",
                 "/opt/homebrew/Cellar/sdl2_ttf/2.22.0/include/SDL2/**"
-                // "/opt/homebrew/include/SDL2/**",
                 // "/opt/homebrew/Cellar/sdl2/2.30.5/include"
             ],
             "defines": [],

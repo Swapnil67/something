@@ -9,7 +9,10 @@ enum class Tile {
 
 const int LEVEL_WIDTH = 10;
 const int LEVEL_HEIGHT = 10;
-const SDL_Rect level_boundary = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
+
+// * Level Boundary
+const SDL_Rect LEVEL_BOUNDARY = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
+
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
@@ -22,6 +25,7 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Wall, Tile::Empty, Tile::Wall, Tile::Empty, Tile::Empty},
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
 };
+
 static inline
 bool is_tile_inbounds(Vec2i p) {
   return 0 <= p.x && p.x < LEVEL_WIDTH && 0 <= p.y && p.y < LEVEL_HEIGHT;

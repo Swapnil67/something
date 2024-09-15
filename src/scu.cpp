@@ -5,12 +5,7 @@
 
 #include<png.h>
 #include<SDL_ttf.h>
-#include<SDL2/SDL.h>
-
-template <typename T>
-T min(T a, T b) {
-  return a < b ? a : b;
-}
+#include<SDL.h>
 
 void print1(FILE *stream, char c) {
   fputc(c, stream);
@@ -61,7 +56,7 @@ void println(FILE *stream, T... args) {
 #include "./error.cpp"
 #include "./something_result.cpp"
 #include "./something_string_view.cpp"
-#include "./vec.cpp"
+#include "./math.cpp"
 #include "./sprite.cpp"
 #include "./level.cpp"
 #include "./projectile.cpp"
