@@ -266,7 +266,7 @@ void update_game_state(const Game_State game_state, Uint32 dt) {
 
 const uint32_t STEP_DEBUG_FPS = 60;
 
-void init_entities(Animation walking, Animation idle) {
+void reset_entities(Animation walking, Animation idle) {
     // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
   const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
@@ -322,7 +322,7 @@ int main() {
   auto walking = load_animation_file("./assets/animats/walking.txt");
   auto idle = load_animation_file("./assets/animats/idle.txt");
 
-  init_entities(walking, idle);
+  reset_entities(walking, idle);
   init_projectiles(plasma_bolt_animation, plasma_pop_animation);
 
 
@@ -376,7 +376,7 @@ int main() {
               entity_shoot(PLAYER_ENTITY_IDX);
             } break;
             case SDLK_r: {
-              init_entities(walking, idle);
+              reset_entities(walking, idle);
               // entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
               // entities[PLAYER_ENTITY_IDX].vel.y = 0;
               // for (int i = 0; i < ENEMY_COUNT; ++i) {
