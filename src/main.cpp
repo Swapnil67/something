@@ -186,11 +186,11 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer, Uint32 
     if (entities[i].state == Entity_State::Ded)
       continue;
     sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
-    auto dstrect = entity_dstrect(entities[i]);
+    auto dstrect = entity_texbox_world(entities[i]);
     sec(SDL_RenderDrawRect(renderer, &dstrect));
 
     sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
-    auto hitbox = entity_hitbox(entities[i]);
+    auto hitbox = entity_hitbox_world(entities[i]);
     sec(SDL_RenderDrawRect(renderer, &hitbox));
   }
 
@@ -255,7 +255,7 @@ void update_game_state(const Game_State game_state, Uint32 dt) {
       if (projectile->shooter_entity == entity_index)
         continue;
 
-      if (rect_contains_vec2i(entity_hitbox(*entity), projectile->pos)) {
+      if (rect_contains_vec2i(entity_hitbox_world(*entity), projectile->pos)) {
         projectile->state = Projectile_State::Poof; 
         projectile->poof_animation.frame_current = 0;
         entity->state = Entity_State::Ded;
@@ -270,19 +270,19 @@ void init_entities(Animation walking, Animation idle) {
     // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
   const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
-  SDL_Rect texbox = {
+  SDL_Rect texbox_local = {
       -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
       PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
   // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
  
-  SDL_Rect hitbox = {
+  SDL_Rect hitbox_local = {
       -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
       PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
 
   memset(entities + PLAYER_ENTITY_IDX, 0, sizeof(Entity));
   entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
-  entities[PLAYER_ENTITY_IDX].texbox = texbox;
-  entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
+  entities[PLAYER_ENTITY_IDX].texbox_local = texbox_local;
+  entities[PLAYER_ENTITY_IDX].hitbox_local = hitbox_local;
   entities[PLAYER_ENTITY_IDX].idle = idle;
   entities[PLAYER_ENTITY_IDX].walking = walking;
   entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
@@ -290,8 +290,8 @@ void init_entities(Animation walking, Animation idle) {
   for (int i = 0; i < ENEMY_COUNT; ++i) {
     memset(entities + ENEMY_ENTITY_IDX_OFFSET + i, 0, sizeof(Entity));
     entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox = hitbox;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox_local = texbox_local;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox_local = hitbox_local;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
