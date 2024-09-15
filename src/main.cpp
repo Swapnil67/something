@@ -167,26 +167,30 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer, Uint32 
     int SECOND_COLUMN_OFFSET = 400;
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, PADDING),
-             "State %s", projectile_state_as_cstr(projectile.state));
+             "State: %s", projectile_state_as_cstr(projectile.state));
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 + PADDING),
-             "Position (%d, %d)", projectile.pos.x, projectile.pos.y);
+             "Position: (%d, %d)", projectile.pos.x, projectile.pos.y);
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 * 2 + PADDING),
-             "Velocity (%d %d)", projectile.vel.x, projectile.vel.y);
+             "Velocity: (%d %d)", projectile.vel.x, projectile.vel.y);
+
+    displayf(renderer, game_state.debug_font,
+             {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 * 3 + PADDING),
+             "Shooter Index: %d", projectile.shooter_entity);
   }
 
-  for (size_t i = 0; i < entities_count; ++i) {
+  for (size_t i = 0; i < ENTITIES_COUNT; ++i) {
     if (entities[i].state == Entity_State::Ded)
       continue;
     sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
-    auto dstrect = entity_dstrect(entities[i]);
+    auto dstrect = entity_texbox_world(entities[i]);
     sec(SDL_RenderDrawRect(renderer, &dstrect));
 
     sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
-    auto hitbox = entity_hitbox(entities[i]);
+    auto hitbox = entity_hitbox_world(entities[i]);
     sec(SDL_RenderDrawRect(renderer, &hitbox));
   }
 
@@ -231,14 +235,73 @@ void render_game_state(const Game_State game_state,
 
 void update_game_state(const Game_State game_state, Uint32 dt) {
   for (int i = 0; i < ENEMY_COUNT; ++i) {
-    entity_shoot(&entities[ENEMY_ENTITY_IDX_OFFSET + i]);
+    entity_shoot(ENEMY_ENTITY_IDX_OFFSET + i);
   }
 
   update_entities(game_state.gravity, dt);
   update_projectiles(dt);
+
+  for (size_t projectile_index = 0;
+       projectile_index < projectiles_count;
+       ++projectile_index) {
+    auto projectile = projectiles + projectile_index;
+    if (projectile->state != Projectile_State::Active)
+      continue;
+
+    for (size_t entity_index = 0; entity_index < ENTITIES_COUNT; ++entity_index) {
+      auto entity = entities + entity_index;
+      if (entity->state != Entity_State::Alive)
+        continue;
+      if (projectile->shooter_entity == entity_index)
+        continue;
+
+      if (rect_contains_vec2i(entity_hitbox_world(*entity), projectile->pos)) {
+        projectile->state = Projectile_State::Poof; 
+        projectile->poof_animation.frame_current = 0;
+        entity->state = Entity_State::Ded;
+      }
+    }
+  }
 }
 
 const uint32_t STEP_DEBUG_FPS = 60;
+
+void init_entities(Animation walking, Animation idle) {
+    // * Entity
+  const int PLAYER_TEXBOX_SIZE = 48;
+  const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
+  SDL_Rect texbox_local = {
+      -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
+      PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
+  // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
+ 
+  SDL_Rect hitbox_local = {
+      -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
+      PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
+
+  memset(entities + PLAYER_ENTITY_IDX, 0, sizeof(Entity));
+  entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
+  entities[PLAYER_ENTITY_IDX].texbox_local = texbox_local;
+  entities[PLAYER_ENTITY_IDX].hitbox_local = hitbox_local;
+  entities[PLAYER_ENTITY_IDX].idle = idle;
+  entities[PLAYER_ENTITY_IDX].walking = walking;
+  entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
+
+  for (int i = 0; i < ENEMY_COUNT; ++i) {
+    memset(entities + ENEMY_ENTITY_IDX_OFFSET + i, 0, sizeof(Entity));
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox_local = texbox_local;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox_local = hitbox_local;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
+    static_assert(LEVEL_WIDTH >= 2);
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
+  }
+
+}
+
 int main() {
   sec(SDL_Init(SDL_INIT_VIDEO));
 
@@ -259,38 +322,9 @@ int main() {
   auto walking = load_animation_file("./assets/animats/walking.txt");
   auto idle = load_animation_file("./assets/animats/idle.txt");
 
+  init_entities(walking, idle);
   init_projectiles(plasma_bolt_animation, plasma_pop_animation);
 
-  // * Entity
-  const int PLAYER_TEXBOX_SIZE = 48;
-  const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
-  SDL_Rect texbox = {
-      -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
-      PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
-  // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
- 
-  SDL_Rect hitbox = {
-      -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
-      PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
-
-  entities[PLAYER_ENTITY_IDX].state = Entity_State::Alive;
-  entities[PLAYER_ENTITY_IDX].texbox = texbox;
-  entities[PLAYER_ENTITY_IDX].hitbox = hitbox;
-  entities[PLAYER_ENTITY_IDX].idle = idle;
-  entities[PLAYER_ENTITY_IDX].walking = walking;
-  entities[PLAYER_ENTITY_IDX].current = &entities[PLAYER_ENTITY_IDX].idle;
-
-  for (int i = 0; i < ENEMY_COUNT; ++i) {
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].state = Entity_State::Alive;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].texbox = texbox;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].hitbox = hitbox;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].walking = walking;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
-    static_assert(LEVEL_WIDTH >= 2);
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
-  }
 
   stec(TTF_Init());
   const int DEBUG_FONT_SIZE = 18;
@@ -339,15 +373,16 @@ int main() {
               }
             } break;
             case SDLK_e: {
-              entity_shoot(&entities[PLAYER_ENTITY_IDX]);
+              entity_shoot(PLAYER_ENTITY_IDX);
             } break;
             case SDLK_r: {
-              entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
-              entities[PLAYER_ENTITY_IDX].vel.y = 0;
-              for (int i = 0; i < ENEMY_COUNT; ++i) {
-                entities[ENEMY_ENTITY_IDX_OFFSET + i].pos.y = 0;
-                entities[ENEMY_ENTITY_IDX_OFFSET + i].vel.y = 0;
-              }
+              init_entities(walking, idle);
+              // entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
+              // entities[PLAYER_ENTITY_IDX].vel.y = 0;
+              // for (int i = 0; i < ENEMY_COUNT; ++i) {
+              //   entities[ENEMY_ENTITY_IDX_OFFSET + i].pos.y = 0;
+              //   entities[ENEMY_ENTITY_IDX_OFFSET + i].vel.y = 0;
+              // }
             } break;
           }
         } break;
