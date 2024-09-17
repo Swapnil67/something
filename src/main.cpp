@@ -124,7 +124,6 @@ struct Game_State {
 
 };
 
-
 const int ENEMY_COUNT = 4;
 const int ENEMY_ENTITY_IDX_OFFSET = 1;
 const int PLAYER_ENTITY_IDX = 0;
@@ -359,6 +358,8 @@ int main() {
   bool debug = false;
   bool step_debug = false;
   Uint32 prev_dt = 0;
+  float a = 0.0f;
+
   while (!game_state.quit) {
     const Uint32 begin = SDL_GetTicks();
 
@@ -391,14 +392,11 @@ int main() {
             case SDLK_e: {
               entity_shoot(PLAYER_ENTITY_IDX);
             } break;
+            case SDLK_c: {
+              a += 0.1f;
+            } break;
             case SDLK_r: {
               reset_entities(walking, idle);
-              // entities[PLAYER_ENTITY_IDX].pos = vec2(0, 0);
-              // entities[PLAYER_ENTITY_IDX].vel.y = 0;
-              // for (int i = 0; i < ENEMY_COUNT; ++i) {
-              //   entities[ENEMY_ENTITY_IDX_OFFSET + i].pos.y = 0;
-              //   entities[ENEMY_ENTITY_IDX_OFFSET + i].vel.y = 0;
-              // }
             } break;
           }
         } break;
@@ -461,12 +459,23 @@ int main() {
     if(debug) {
       render_debug_overlay(game_state, renderer, camera, step_debug ? STEP_DEBUG_FPS : 1000 / prev_dt);
     }
+
+    // {
+    //   Vec2i anchor = {100, 100};
+    //   float w = idle.frames[0].srcrect.w + idle.frames[0].srcrect.w * a;
+    //   float h = idle.frames[0].srcrect.h * (1.0f - a);
+    //   SDL_Rect dstrect = {(int)floorf(anchor.x - w * 0.5), (int)floorf(anchor.y - h), (int)floorf(w), (int)floorf(h)};
+    //   render_sprite(renderer, idle.frames[0], dstrect);
+    // }
+
     SDL_RenderPresent(renderer);
 
     // * calculate the next state
     if(!step_debug) {
       const Uint32 dt = SDL_GetTicks() - begin;
       update_game_state(game_state, dt);
+      // println(stdout, 1.0f * (1.0f / dt));
+      // a = a + 1.0f * (1.0f / dt);
       prev_dt = dt;
     }
   }
