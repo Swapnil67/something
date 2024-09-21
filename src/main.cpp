@@ -403,7 +403,7 @@ int main() {
           game_state.collision_probe = game_state.mouse_position;
           resolve_point_collision(&game_state.collision_probe);
 
-          Vec2<int> tile = vec_cast<int>(game_state.mouse_position / TILE_SIZE);
+          Vec2i tile = vec_cast<int>(game_state.mouse_position / TILE_SIZE);
           switch(game_state.state) {
             case Debug_Draw_State::Create: {
               if (is_tile_inbounds(tile))
@@ -423,7 +423,7 @@ int main() {
 
             // * create or remove tile 
             if(game_state.tracking_projectile_index < 0) {
-              Vec2<int> tile = vec_cast<int>(game_state.mouse_position / TILE_SIZE);
+              Vec2i tile = vec_cast<int>(game_state.mouse_position / TILE_SIZE);
               if(is_tile_inbounds(tile)) {
                 if(level[tile.y][tile.x] == Tile::Empty) {
                   game_state.state = Debug_Draw_State::Create;

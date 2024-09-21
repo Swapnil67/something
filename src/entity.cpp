@@ -49,7 +49,7 @@ void resolve_point_collision(Vec2f *p) {
   struct Side {
     float d;
     Vec2f np;     // * neighbor position
-    Vec2<int> nd;     // * neighbor direction
+    Vec2i nd;     // * neighbor direction
     float dd;
   };
 

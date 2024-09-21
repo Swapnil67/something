@@ -10,6 +10,7 @@ template <typename T>
 Vec2<T> vec2(T x, T y) { return {x, y}; };
 
 // * alias
+using Vec2i = Vec2<int>;
 using Vec2f = Vec2<float>;
 
 ////////////////////////////
@@ -149,7 +150,7 @@ Vec2<U> vec_cast(Vec2<T> v) {
 
 // * Template specialisation
 template<>
-Vec2<int> vec_cast(Vec2<float> v) {
+Vec2i vec_cast(Vec2<float> v) {
   return {(int)floorf(v.x), (int)floorf(v.y)};
 }
 
