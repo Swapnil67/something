@@ -160,22 +160,22 @@ SDL_Texture *spritesheet_by_name(String_View filename) {
 
 Animation load_spritesheet_animation(
     SDL_Renderer *renderer,
-    int frame_count,
+    size_t frame_count,
     float frame_duration,
     const char *spritesheet_filepath)
 {
   Animation result = {};
   result.frames = new Sprite[frame_count];
-  result.frame_count = (size_t)frame_count;
+  result.frame_count = frame_count;
   result.frame_duration = frame_duration;
   SDL_Texture *spritesheet = load_texture_from_png_file(renderer, spritesheet_filepath);
   int spritesheet_w = 0;
   int spritesheet_h = 0;
   sec(SDL_QueryTexture(spritesheet, NULL, NULL, &spritesheet_w, &spritesheet_h));
-  int sprite_w = spritesheet_w / frame_count;
+  int sprite_w = spritesheet_w / (int) frame_count;
   int sprite_h = spritesheet_h; // * Note We only handle horizontal spritesheet
 
-  for (int i = 0; i < frame_count; ++i) {
+  for (int i = 0; i < (int) frame_count; ++i) {
     result.frames[i].srcrect = {i * sprite_w, 0, sprite_w, sprite_h};
     result.frames[i].texture = spritesheet;
   }
@@ -254,11 +254,11 @@ Animation load_animation_file(const char *animation_filepath)
         abort_parse_error(stderr, source, input, animation_filepath, "`count` provided twice");
       }
 
-      auto count_result = value.as_integer<size_t>();
+      auto count_result = value.as_integer<int>();
       if(!count_result.has_value) {
         abort_parse_error(stderr, source, input, animation_filepath, "`count` is not a number");
       }
-      animation.frame_count = count_result.unwrap;
+      animation.frame_count = (size_t)count_result.unwrap;
       animation.frames = new Sprite[animation.frame_count];
     }
     else if(subkey == "sprite"_sv) {
@@ -274,12 +274,12 @@ Animation load_animation_file(const char *animation_filepath)
     }
     else if(subkey == "frames"_sv) {
       // Result<size_t, void> result = as_number<size_t>(trim(chop_by_delim(&key, '.'), isspace));
-      auto result = key.chop_by_delim('.').trim().as_integer<size_t>();
+      auto result = key.chop_by_delim('.').trim().as_integer<int>();
       if (!result.has_value) {  
         abort_parse_error(stderr, source, input, animation_filepath, "frame index is not a number");   
       }
-      
-      size_t frame_index = result.unwrap;
+
+      size_t frame_index = (size_t)result.unwrap;
       if (frame_index >= animation.frame_count) {
         abort_parse_error(stderr, source, input, animation_filepath, "incorrect frame index");   
       }

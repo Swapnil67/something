@@ -58,7 +58,7 @@ void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2f p, 
 
 
 struct RGBA32 {
-  uint8_t r,g,b,a;
+  uint32_t r,g,b,a;
 };
 
 RGBA32 decode_pixel(Uint32 pixel, SDL_PixelFormat *format) {
@@ -207,9 +207,9 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer,
   }
 
   // * projectile hitbox
-  int index = projectiles_at_position(game_state.mouse_position);
+  int index = projectile_at_position(game_state.mouse_position);
   if(index >= 0) {
-    auto hitbox = rectf_for_sdl(hitbox_of_projectile((size_t)index) - camera.pos);
+    auto hitbox = rectf_for_sdl(hitbox_of_projectile(index) - camera.pos);
     sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
     sec(SDL_RenderDrawRect(renderer, &hitbox));
     return;
@@ -253,7 +253,7 @@ void update_game_state(const Game_State game_state, float dt) {
     if (projectile->state != Projectile_State::Active)
       continue;
 
-    for (size_t entity_index = 0; entity_index < ENTITIES_COUNT; ++entity_index) {
+    for (int entity_index = 0; entity_index < ENTITIES_COUNT; ++entity_index) {
       auto entity = entities + entity_index;
       if (entity->state != Entity_State::Alive)
         continue;
@@ -416,7 +416,7 @@ int main() {
         case SDL_MOUSEBUTTONDOWN: {
           if(debug) {
             // * track specific projectile
-            game_state.tracking_projectile_index = projectiles_at_position(game_state.mouse_position);
+            game_state.tracking_projectile_index = projectile_at_position(game_state.mouse_position);
 
             // * create or remove tile 
             if(game_state.tracking_projectile_index < 0) {

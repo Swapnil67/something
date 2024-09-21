@@ -15,13 +15,13 @@ const char* projectile_state_as_cstr(Projectile_State state) {
     return "Poof";
   }
 
-  assert(!"Incorrect Projectile State");
+  assert(0 && "Incorrect Projectile State");
 }
 
 struct Projectile {
   Vec2f pos;
   Vec2f vel;
-  size_t shooter_entity;
+  int shooter_entity;
   Projectile_State state;
   Animation active_animation;
   Animation poof_animation;
@@ -54,7 +54,7 @@ void spwan_projectiles(Vec2f pos, Vec2f vel, int shooter_entity) {
       projectiles[i].state = Projectile_State::Active;
       projectiles[i].pos = pos;
       projectiles[i].vel = vel;
-      projectiles[i].shooter_entity = (size_t)shooter_entity;
+      projectiles[i].shooter_entity = shooter_entity;
       return; 
     }
   } 
@@ -111,10 +111,10 @@ void update_projectiles(float dt) {
 
 const float PROJECTILE_TRACKING_PADDING = 50.0f;
 
-Rectf hitbox_of_projectile (size_t index) {
+Rectf hitbox_of_projectile (int index) {
   // * x = 188, y = 237
   // * x = 163, y = 212
-  assert(index < projectiles_count);
+  assert(index < (int)projectiles_count);
   return Rectf {
       projectiles[index].pos.x - PROJECTILE_TRACKING_PADDING * 0.5f,
       projectiles[index].pos.y - PROJECTILE_TRACKING_PADDING * 0.5f,
@@ -123,12 +123,12 @@ Rectf hitbox_of_projectile (size_t index) {
 }
 
 // TODO Introduce an int typedef that indicates Projectile Id
-int projectiles_at_position(Vec2f position) {
+int projectile_at_position(Vec2f position) {
   // * projectile hitbox
   for (int i = 0; i < (int)projectiles_count; ++i) {
     if (projectiles[i].state == Projectile_State::Ded)
       continue;
-    Rectf hitbox = hitbox_of_projectile((size_t)i);
+    Rectf hitbox = hitbox_of_projectile(i);
     if(rect_contains_vec2(hitbox, position)) {
       return i;
     }
