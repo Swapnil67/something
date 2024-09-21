@@ -11,10 +11,10 @@ enum class Entity_State {
 struct Entity {
   Entity_State state;
   
-  SDL_Rect texbox_local;
-  SDL_Rect hitbox_local;
-  Vec2i pos;
-  Vec2i vel;
+  Rectf texbox_local;
+  Rectf hitbox_local;
+  Vec2f pos;
+  Vec2f vel;
 
   Animation idle;
   Animation walking;
@@ -28,11 +28,11 @@ const int ENTITIES_COUNT = 69;
 Entity entities[ENTITIES_COUNT];
 
 
-void resolve_point_collision(Vec2i *p) {
+void resolve_point_collision(Vec2f *p) {
   assert(p);
 
   // * Calculates which tile player is currently standing
-  const auto tile = *p / TILE_SIZE;
+  const auto tile = vec_cast<int>(*p / TILE_SIZE);
   // printf("Position : %d\t%d\n", p->x, p->y);
   // printf("Tile x : %d\t Tile y : %d\n", tile.x, tile.y);
 
@@ -42,27 +42,27 @@ void resolve_point_collision(Vec2i *p) {
   }
 
   // * Calculates the tile texbox points
-  const auto p0 = tile * TILE_SIZE;
-  const auto p1 = (tile + 1) * TILE_SIZE;
+  const auto p0 = vec_cast<float>(tile) * TILE_SIZE;
+  const auto p1 = vec_cast<float>(tile + 1) * TILE_SIZE;
   // printf("%d\t%d\t%d\t%d\n", p0.x, p1.x, p0.y, p1.y);
 
   struct Side {
-    int d;
-    Vec2i np;     // * neighbor position
+    float d;
+    Vec2f np;     // * neighbor position
     Vec2i nd;     // * neighbor direction
-    int dd;
+    float dd;
   };
 
   // * distance x and y
   Side sides[] = {
-      {sqr_dist({p0.x, 0}, {p->x, 0}), {p0.x, p->y}, {-1, 0}, TILE_SIZE_SQR},            // * Left side
-      {sqr_dist({p1.x, 0}, {p->x, 0}), {p1.x, p->y}, {1, 0}, TILE_SIZE_SQR},             // * Right side
-      {sqr_dist({0, p0.y}, {0, p->y}), {p->x, p0.y}, {0, -1}, TILE_SIZE_SQR},            // * Top side
-      {sqr_dist({0, p1.y}, {0, p->y}), {p->x, p1.y}, {0, 1}, TILE_SIZE_SQR},             // * Bottom side
-      {sqr_dist({p0.x, p0.y}, {p->x, p->y}), {p0.x, p0.y}, {-1, -1}, TILE_SIZE_SQR * 2}, // * Top left
-      {sqr_dist({p1.x, p0.y}, {p->x, p->y}), {p1.x, p0.y}, {1, -1}, TILE_SIZE_SQR * 2},  // * Top right
-      {sqr_dist({p0.x, p1.y}, {p->x, p->y}), {p0.x, p1.y}, {-1, 1}, TILE_SIZE_SQR * 2},  // * Bottom left
-      {sqr_dist({p1.x, p1.y}, {p->x, p->y}), {p1.x, p1.y}, {1, 1}, TILE_SIZE_SQR * 2},   // * Bottom right
+      {sqr_dist<float>({p0.x, 0}, {p->x, 0}), {p0.x, p->y}, {-1, 0}, TILE_SIZE_SQR},            // * Left side
+      {sqr_dist<float>({p1.x, 0}, {p->x, 0}), {p1.x, p->y}, {1, 0}, TILE_SIZE_SQR},             // * Right side
+      {sqr_dist<float>({0, p0.y}, {0, p->y}), {p->x, p0.y}, {0, -1}, TILE_SIZE_SQR},            // * Top side
+      {sqr_dist<float>({0, p1.y}, {0, p->y}), {p->x, p1.y}, {0, 1}, TILE_SIZE_SQR},             // * Bottom side
+      {sqr_dist<float>({p0.x, p0.y}, {p->x, p->y}), {p0.x, p0.y}, {-1, -1}, TILE_SIZE_SQR * 2}, // * Top left
+      {sqr_dist<float>({p1.x, p0.y}, {p->x, p->y}), {p1.x, p0.y}, {1, -1}, TILE_SIZE_SQR * 2},  // * Top right
+      {sqr_dist<float>({p0.x, p1.y}, {p->x, p->y}), {p0.x, p1.y}, {-1, 1}, TILE_SIZE_SQR * 2},  // * Bottom left
+      {sqr_dist<float>({p1.x, p1.y}, {p->x, p->y}), {p1.x, p1.y}, {1, 1}, TILE_SIZE_SQR * 2},   // * Bottom right
   };
 
   const int SIDES_COUNT = sizeof(sides) / sizeof(sides[0]);
@@ -94,12 +94,12 @@ void resolve_entity_collision(Entity *entity) {
   assert(entity);
 
   // * Entity texbox points
-  Vec2i p0 = vec2(entity->hitbox_local.x, entity->hitbox_local.y) + entity->pos;
-  Vec2i p1 = p0 + vec2(entity->hitbox_local.w, entity->hitbox_local.h);
+  Vec2f p0 = vec2(entity->hitbox_local.x, entity->hitbox_local.y) + entity->pos;
+  Vec2f p1 = p0 + vec2(entity->hitbox_local.w, entity->hitbox_local.h);
 
   // printf("%d\t%d\t%d\t%d\n", p0.x, p1.x, p0.y, p1.y);
   // * 0       48       211      259
-  Vec2i mesh[] = {
+  Vec2f mesh[] = {
     p0,
     {p1.x, p0.y},
     {p0.x, p1.y},
@@ -108,11 +108,11 @@ void resolve_entity_collision(Entity *entity) {
 
   const int MESH_COUNT = sizeof(mesh) / sizeof(mesh[0]);
   for (int i = 0; i < MESH_COUNT; ++i) {
-    Vec2i t = mesh[i];
+    Vec2f t = mesh[i];
     resolve_point_collision(&t);
 
     // * Snaps the entity to proper position & resolves the collision
-    Vec2i d = t - mesh[i];
+    Vec2f d = t - mesh[i];
 
     const int IMPACT_THRESHOLD = 5;
     if (std::abs(d.y) >= IMPACT_THRESHOLD)
@@ -127,14 +127,20 @@ void resolve_entity_collision(Entity *entity) {
   }
 } 
 
-SDL_Rect entity_texbox_world(const Entity entity) {
-  return SDL_Rect{
-      entity.texbox_local.x + entity.pos.x, entity.texbox_local.y + entity.pos.y, entity.texbox_local.w, entity.texbox_local.h};
+Rectf entity_texbox_world(const Entity entity) {
+  return Rectf{
+      entity.texbox_local.x + entity.pos.x,
+      entity.texbox_local.y + entity.pos.y,
+      entity.texbox_local.w,
+      entity.texbox_local.h};
 }
 
-SDL_Rect entity_hitbox_world(const Entity entity) {
-  return SDL_Rect{
-      entity.hitbox_local.x + entity.pos.x, entity.hitbox_local.y + entity.pos.y, entity.hitbox_local.w, entity.hitbox_local.h};
+Rectf entity_hitbox_world(const Entity entity) {
+  return Rectf{
+      entity.hitbox_local.x + entity.pos.x,
+      entity.hitbox_local.y + entity.pos.y,
+      entity.hitbox_local.w,
+      entity.hitbox_local.h};
 }
 
 void render_entity(SDL_Renderer *renderer, const Entity entity, Camera camera) {
@@ -143,7 +149,7 @@ void render_entity(SDL_Renderer *renderer, const Entity entity, Camera camera) {
   if (entity.state == Entity_State::Ded)
     return;
     
-  SDL_Rect dstrect = entity_texbox_world(entity);
+  Rectf dstrect = entity_texbox_world(entity);
   dstrect.x -= camera.pos.x;
   dstrect.y -= camera.pos.y;
 
@@ -151,17 +157,17 @@ void render_entity(SDL_Renderer *renderer, const Entity entity, Camera camera) {
   render_animation(renderer, *entity.current, dstrect, flip);
 }
 
-void update_entity(Entity *entity, Vec2i gravity, uint32_t dt) {
+void update_entity(Entity *entity, Vec2f gravity, float dt) {
   assert(entity);
 
   if (entity->state == Entity_State::Ded)
     return;
 
   // * Add Gravity
-  entity->vel += gravity;
+  entity->vel += gravity * dt;
 
   // * Add Velocity
-  entity->pos += entity->vel;
+  entity->pos += entity->vel * dt;
 
   // * Resolve Collision
   resolve_entity_collision(entity);
@@ -172,7 +178,7 @@ void update_entity(Entity *entity, Vec2i gravity, uint32_t dt) {
 }
 
 
-void entity_move(Entity *entity, int speed) {
+void entity_move(Entity *entity, float speed) {
   assert(entity);
   if (speed < 0) {
     entity->dir = Entity_Dir::Left;
@@ -202,15 +208,15 @@ void entity_shoot(int entity_index) {
   if (entity->cooldown_weapon > 0)
     return;
   if (entity->dir == Entity_Dir::Right) {
-    spwan_projectiles(entity->pos, vec2(10, 0), entity_index);
+    spwan_projectiles(entity->pos, vec2(10.0f, 0.0f), entity_index);
   } else {
-    spwan_projectiles(entity->pos, vec2(-10, 0), entity_index);
+    spwan_projectiles(entity->pos, vec2(-10.0f, 0.0f), entity_index);
   }
   entity->cooldown_weapon = ENTITY_WEAPON_COOLDOWN;
 }
 
 // * update all entities
-void update_entities(Vec2i gravity, uint32_t dt) {
+void update_entities(Vec2f gravity, float dt) {
   for (int i = 0; i < ENTITIES_COUNT; ++i) {
     update_entity(&entities[i], gravity, dt);
   }

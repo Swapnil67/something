@@ -60,7 +60,7 @@ void println(FILE *stream, T... args) {
 #include "./math.cpp"
 
 struct Camera {
-  Vec2i pos;
+  Vec2f pos;
 };
 
 #include "./something_result.cpp"
