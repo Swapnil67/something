@@ -32,7 +32,7 @@ void resolve_point_collision(Vec2f *p) {
   assert(p);
 
   // * Calculates which tile player is currently standing
-  const auto tile = vec_cast<int>(*p / (float) TILE_SIZE);
+  const auto tile = vec_cast<int>(*p / TILE_SIZE);
   // printf("Position : %d\t%d\n", p->x, p->y);
   // printf("Tile x : %d\t Tile y : %d\n", tile.x, tile.y);
 
@@ -42,8 +42,8 @@ void resolve_point_collision(Vec2f *p) {
   }
 
   // * Calculates the tile texbox points
-  const auto p0 = vec_cast<float>(tile * TILE_SIZE);
-  const auto p1 = vec_cast<float>((tile + 1) * TILE_SIZE);
+  const auto p0 = vec_cast<float>(tile) * TILE_SIZE;
+  const auto p1 = vec_cast<float>(tile + 1) * TILE_SIZE;
   // printf("%d\t%d\t%d\t%d\n", p0.x, p1.x, p0.y, p1.y);
 
   struct Side {

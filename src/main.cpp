@@ -217,12 +217,15 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer,
 
   sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
   // * tile hitbox
-  const SDL_Rect tile_rect = {
-      int(floorf(game_state.mouse_position.x / (float)TILE_SIZE) * TILE_SIZE - camera.pos.x),
-      int(floorf(game_state.mouse_position.y / (float)TILE_SIZE) * TILE_SIZE - camera.pos.y),
+  const Rectf rect = {
+      floorf(game_state.mouse_position.x / (float)TILE_SIZE) * TILE_SIZE - camera.pos.x,
+      floorf(game_state.mouse_position.y / (float)TILE_SIZE) * TILE_SIZE - camera.pos.y,
       TILE_SIZE, TILE_SIZE};
 
-  sec(SDL_RenderDrawRect(renderer, &tile_rect));
+  {
+    const SDL_Rect tile_rect = rectf_for_sdl(rect);
+    sec(SDL_RenderDrawRect(renderer, &tile_rect));
+  }
 
 }
 
@@ -301,7 +304,7 @@ void reset_entities(Animation walking, Animation idle) {
     entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
     static_assert(LEVEL_WIDTH >= 2);
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec_cast<float>(vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE);
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec_cast<float>(vec2(LEVEL_WIDTH - 2 - i, 0)) * TILE_SIZE;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
   }
 
@@ -400,7 +403,7 @@ int main() {
           game_state.collision_probe = game_state.mouse_position;
           resolve_point_collision(&game_state.collision_probe);
 
-          Vec2<int> tile = vec_cast<int>(game_state.mouse_position / (float)TILE_SIZE);
+          Vec2<int> tile = vec_cast<int>(game_state.mouse_position / TILE_SIZE);
           switch(game_state.state) {
             case Debug_Draw_State::Create: {
               if (is_tile_inbounds(tile))
@@ -420,7 +423,7 @@ int main() {
 
             // * create or remove tile 
             if(game_state.tracking_projectile_index < 0) {
-              Vec2<int> tile = vec_cast<int>(game_state.mouse_position / (float)TILE_SIZE);
+              Vec2<int> tile = vec_cast<int>(game_state.mouse_position / TILE_SIZE);
               if(is_tile_inbounds(tile)) {
                 if(level[tile.y][tile.x] == Tile::Empty) {
                   game_state.state = Debug_Draw_State::Create;

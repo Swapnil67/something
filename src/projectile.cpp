@@ -87,7 +87,7 @@ void update_projectiles(float dt) {
       case Projectile_State::Active: {
         update_animation(&projectiles[i].active_animation, dt);
         projectiles[i].pos += projectiles[i].vel;
-        auto projectile_tile = projectiles[i].pos / (float) TILE_SIZE;
+        auto projectile_tile = projectiles[i].pos / TILE_SIZE;
         if (!is_tile_empty(vec_cast<int>(projectile_tile)) ||
             !rect_contains_vec2(LEVEL_BOUNDARY, projectiles[i].pos))
         {
