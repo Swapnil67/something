@@ -5,7 +5,7 @@ SDL_Texture *render_text_as_texture(SDL_Renderer *renderer, TTF_Font *font, cons
   return texture;
 }
 
-void render_texture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) {
+void render_texture(SDL_Renderer *renderer, SDL_Texture *texture, Vec2f p) {
   // * get the width & height of texture
   int w, h;
   sec(SDL_QueryTexture(texture, NULL, NULL, &w, &h));
@@ -13,17 +13,17 @@ void render_texture(SDL_Renderer *renderer, SDL_Texture *texture, int x, int y) 
   SDL_Rect srcrect = {0, 0, w, h};
 
   // * box to destination
-  SDL_Rect dstrect = {x, y, w, h};
+  SDL_Rect dstrect = {(int)floorf(p.x), (int)floorf(p.y), w, h};
   sec(SDL_RenderCopy(renderer, texture, &srcrect, &dstrect));
 }
 
 const size_t DIGITS_COUNT = 10;
 SDL_Texture *digits_textures[DIGITS_COUNT];
 
-void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int y) {
+void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, Vec2f p) {
   if(number == 0) {
     static_assert(DIGITS_COUNT > 1);
-    render_texture(renderer, digits_textures[0], x, y);
+    render_texture(renderer, digits_textures[0], p);
     return;
   }
 
@@ -35,14 +35,14 @@ void render_digits_of_number(SDL_Renderer *renderer, uint64_t number, int x, int
     // * pre-rendered glyphs
     int w;
     sec(SDL_QueryTexture(digits_textures[d], NULL, NULL, &w, NULL));
-    render_texture(renderer, digits_textures[d], x, y);
-    x -= w;
+    render_texture(renderer, digits_textures[d], p);
+    p.x -= w;
     number = number / 10;
   }
 }
 
 // TODO: Turn displayf into println style
-void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2i p, const char *format, ...) {
+void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2f p, const char *format, ...) {
   va_list args;
   va_start(args, format);
 
@@ -50,7 +50,7 @@ void displayf(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, Vec2i p, 
   vsnprintf(text, sizeof(text), format, args);
 
   SDL_Texture *texture = render_text_as_texture(renderer, font, text, color);
-  render_texture(renderer, texture, p.x, p.y);
+  render_texture(renderer, texture, p);
   SDL_DestroyTexture(texture);
 
   va_end(args);
@@ -109,10 +109,10 @@ enum class Debug_Draw_State {
 };
 
 struct Game_State {
-  Vec2i gravity;
+  Vec2f gravity;
   bool quit;
-  Vec2i collision_probe;
-  Vec2i mouse_position;
+  Vec2f collision_probe;
+  Vec2f mouse_position;
   Debug_Draw_State state;
 
   TTF_Font *debug_font;
@@ -127,57 +127,60 @@ struct Game_State {
 const int ENEMY_COUNT = 4;
 const int ENEMY_ENTITY_IDX_OFFSET = 1;
 const int PLAYER_ENTITY_IDX = 0;
-const int PLAYER_SPEED = 4;
+const float PLAYER_SPEED = 200.0f;
 
 void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer,
-                          Camera camera, Uint32 fps)
+                          Camera camera)
 {
   sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
 
-  const int COLLISION_PROBE_SIZE = 10;
-  const SDL_Rect collision_probe_rect = {
-      game_state.collision_probe.x - COLLISION_PROBE_SIZE - camera.pos.x,
-      game_state.collision_probe.y - COLLISION_PROBE_SIZE - camera.pos.y,
-      COLLISION_PROBE_SIZE * 2,
-      COLLISION_PROBE_SIZE * 2,
-  };
-  sec(SDL_RenderFillRect(renderer, &collision_probe_rect));
+  const float COLLISION_PROBE_SIZE = 10.0f;
+  const auto collision_probe_rect = rect(
+      game_state.collision_probe - COLLISION_PROBE_SIZE - camera.pos,
+      COLLISION_PROBE_SIZE * 2, COLLISION_PROBE_SIZE * 2);
+  {
+    SDL_Rect rect = rectf_for_sdl(collision_probe_rect);
+    sec(SDL_RenderFillRect(renderer, &rect));
+  }
 
   auto level_boundary_screen = LEVEL_BOUNDARY;
   level_boundary_screen.x -= camera.pos.x;
   level_boundary_screen.y -= camera.pos.y;
-  sec(SDL_RenderDrawRect(renderer, &level_boundary_screen));
+  {
+    auto rect = rectf_for_sdl(level_boundary_screen);
+    sec(SDL_RenderDrawRect(renderer, &rect));
+  }
 
-  const int PADDING = 10;
+  const float PADDING = 10.0f;
   displayf(renderer, game_state.debug_font,
            {255, 0, 0, 255}, vec2(PADDING, PADDING),
-           "FPS: %d", fps);
+           "FPS: %d", 100);
   displayf(renderer, game_state.debug_font,
            {255, 0, 0, 255}, vec2(PADDING, PADDING * 4),
-           "Mouse Position (%d, %d)",
+           "Mouse Position (%.4f, %.4f)",
            game_state.mouse_position.x, game_state.mouse_position.y);
   displayf(renderer, game_state.debug_font,
            {255, 0, 0, 255}, vec2(PADDING, PADDING * 8),
-           "Collision Porbe (%d, %d)",
+           "Collision Porbe (%.4f, %.4f)",
            game_state.collision_probe.x, game_state.collision_probe.y);
   displayf(renderer, game_state.debug_font,
            {255, 0, 0, 255}, vec2(PADDING, PADDING * 12),
-           "Projectiles: %d", count_alive_projectiles());
+           "Projectiles: %f", count_alive_projectiles());
 
   if(game_state.tracking_projectile_index >= 0) {
     auto projectile = projectiles[game_state.tracking_projectile_index];
-    int SECOND_COLUMN_OFFSET = 400;
+    float SECOND_COLUMN_OFFSET = 400.0f;
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, PADDING),
              "State: %s", projectile_state_as_cstr(projectile.state));
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 + PADDING),
-             "Position: (%d, %d)", projectile.pos.x, projectile.pos.y);
+             "Position: (%.4f, %.4f)", projectile.pos.x, projectile.pos.y);
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 * 2 + PADDING),
-             "Velocity: (%d %d)", projectile.vel.x, projectile.vel.y);
+             "Velocity: (%.4f, %.4f)", projectile.vel.x, projectile.vel.y);
 
     displayf(renderer, game_state.debug_font,
              {255, 0, 0, 255}, vec2(PADDING + SECOND_COLUMN_OFFSET, 50 * 3 + PADDING),
@@ -188,24 +191,17 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer,
     if (entities[i].state == Entity_State::Ded)
       continue;
     sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
-    auto dstrect = entity_texbox_world(entities[i]);
-    dstrect.x -= camera.pos.x;
-    dstrect.y -= camera.pos.y;
+    auto dstrect = rectf_for_sdl(entity_texbox_world(entities[i]) - camera.pos);
     sec(SDL_RenderDrawRect(renderer, &dstrect));
 
     sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
-    auto hitbox = entity_hitbox_world(entities[i]);
-    hitbox.x -= camera.pos.x;
-    hitbox.y -= camera.pos.y;
+    auto hitbox = rectf_for_sdl(entity_hitbox_world(entities[i]) - camera.pos);
     sec(SDL_RenderDrawRect(renderer, &hitbox));
   }
 
   // * track a projectile movement
   if(game_state.tracking_projectile_index >= 0) {
-    auto hitbox = hitbox_of_projectile(game_state.tracking_projectile_index);
-    // printf("Pos %d %d\n", hitbox.x, hitbox.y);
-    hitbox.x -= camera.pos.x;
-    hitbox.y -= camera.pos.y;
+    auto hitbox = rectf_for_sdl(hitbox_of_projectile(game_state.tracking_projectile_index) - camera.pos);
     sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
     sec(SDL_RenderDrawRect(renderer, &hitbox)); 
   }
@@ -213,9 +209,7 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer,
   // * projectile hitbox
   int index = projectiles_at_position(game_state.mouse_position);
   if(index >= 0) {
-    auto hitbox = hitbox_of_projectile(index);
-    hitbox.x -= camera.pos.x;
-    hitbox.y -= camera.pos.y;
+    auto hitbox = rectf_for_sdl(hitbox_of_projectile((size_t)index) - camera.pos);
     sec(SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255));
     sec(SDL_RenderDrawRect(renderer, &hitbox));
     return;
@@ -224,9 +218,10 @@ void render_debug_overlay(Game_State game_state, SDL_Renderer *renderer,
   sec(SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255));
   // * tile hitbox
   const SDL_Rect tile_rect = {
-      game_state.mouse_position.x / TILE_SIZE * TILE_SIZE - camera.pos.x,
-      game_state.mouse_position.y / TILE_SIZE * TILE_SIZE - camera.pos.y,
+      int(floorf(game_state.mouse_position.x / (float)TILE_SIZE) * TILE_SIZE - camera.pos.x),
+      int(floorf(game_state.mouse_position.y / (float)TILE_SIZE) * TILE_SIZE - camera.pos.y),
       TILE_SIZE, TILE_SIZE};
+
   sec(SDL_RenderDrawRect(renderer, &tile_rect));
 
 }
@@ -243,7 +238,7 @@ void render_game_state(const Game_State game_state,
   render_projectiles(camera, renderer);
 }
 
-void update_game_state(const Game_State game_state, Uint32 dt) {
+void update_game_state(const Game_State game_state, float dt) {
   for (int i = 0; i < ENEMY_COUNT; ++i) {
     entity_shoot(ENEMY_ENTITY_IDX_OFFSET + i);
   }
@@ -265,7 +260,7 @@ void update_game_state(const Game_State game_state, Uint32 dt) {
       if (projectile->shooter_entity == entity_index)
         continue;
 
-      if (rect_contains_vec2i(entity_hitbox_world(*entity), projectile->pos)) {
+      if (rect_contains_vec2(entity_hitbox_world(*entity), projectile->pos)) {
         projectile->state = Projectile_State::Poof; 
         projectile->poof_animation.frame_current = 0;
         entity->state = Entity_State::Ded;
@@ -280,12 +275,12 @@ void reset_entities(Animation walking, Animation idle) {
     // * Entity
   const int PLAYER_TEXBOX_SIZE = 48;
   const int PLAYER_HITBOX_SIZE = PLAYER_TEXBOX_SIZE - 10;
-  SDL_Rect texbox_local = {
+  const Rectf texbox_local = {
       -(PLAYER_TEXBOX_SIZE / 2), -(PLAYER_TEXBOX_SIZE / 2),
       PLAYER_TEXBOX_SIZE, PLAYER_TEXBOX_SIZE};
   // printf("%d\t%d\t%d\t%d\n", texbox.x, texbox.x, texbox.y, texbox.y);
- 
-  SDL_Rect hitbox_local = {
+
+  const Rectf hitbox_local = {
       -(PLAYER_HITBOX_SIZE / 2), -(PLAYER_HITBOX_SIZE / 2),
       PLAYER_HITBOX_SIZE, PLAYER_HITBOX_SIZE};
 
@@ -306,7 +301,7 @@ void reset_entities(Animation walking, Animation idle) {
     entities[ENEMY_ENTITY_IDX_OFFSET + i].idle = idle;
     entities[ENEMY_ENTITY_IDX_OFFSET + i].current = &entities[ENEMY_ENTITY_IDX_OFFSET].idle;
     static_assert(LEVEL_WIDTH >= 2);
-    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE;
+    entities[ENEMY_ENTITY_IDX_OFFSET + i].pos = vec_cast<float>(vec2(LEVEL_WIDTH - 2 - i, 0) * TILE_SIZE);
     entities[ENEMY_ENTITY_IDX_OFFSET + i].dir = Entity_Dir::Left;
   }
 
@@ -343,7 +338,7 @@ int main() {
   const Uint8 *keyboard = SDL_GetKeyboardState(NULL);
 
   Game_State game_state = {};
-  game_state.gravity = {0, 1};
+  game_state.gravity = {0.0f, 1000.0f};
   game_state.debug_font = stec(TTF_OpenFont("assets/Comic-Sans-MS.ttf", DEBUG_FONT_SIZE));
   game_state.ground_grass_texture = {
     .srcrect = {120, 128, 16, 16},
@@ -357,16 +352,16 @@ int main() {
 
   bool debug = false;
   bool step_debug = false;
-  Uint32 prev_dt = 0;
   float a = 0.0f;
 
   while (!game_state.quit) {
-    const Uint32 begin = SDL_GetTicks();
+    // const Uint32 begin = SDL_GetTicks();
 
     int w = 0, h = 0;
     SDL_GetWindowSize(window, &w, &h);
-    Camera camera = {entities[PLAYER_ENTITY_IDX].pos - vec2(w / 2, h / 2)};
+    Camera camera = {entities[PLAYER_ENTITY_IDX].pos - vec2((float)w, (float)h) * 0.5f};
 
+    // * Handle Event
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
@@ -376,7 +371,7 @@ int main() {
         case SDL_KEYDOWN: {
           switch (event.key.keysym.sym) {
             case SDLK_SPACE: {
-              entities[PLAYER_ENTITY_IDX].vel.y = -20;
+              entities[PLAYER_ENTITY_IDX].vel.y = -game_state.gravity.y * 0.5f;
             } break;
             case SDLK_q: {
               debug = !debug;
@@ -386,7 +381,7 @@ int main() {
             } break;
             case SDLK_x: {
               if(step_debug) {
-                update_game_state(game_state, 1000 / STEP_DEBUG_FPS);
+                update_game_state(game_state, 1.0f / (float)STEP_DEBUG_FPS);
               }
             } break;
             case SDLK_e: {
@@ -401,11 +396,11 @@ int main() {
           }
         } break;
         case SDL_MOUSEMOTION: {
-          game_state.mouse_position = vec2(event.motion.x, event.motion.y) + camera.pos;
+          game_state.mouse_position = vec_cast<float>(vec2(event.motion.x, event.motion.y)) + camera.pos;
           game_state.collision_probe = game_state.mouse_position;
           resolve_point_collision(&game_state.collision_probe);
 
-          Vec2i tile = game_state.mouse_position / TILE_SIZE;
+          Vec2<int> tile = vec_cast<int>(game_state.mouse_position / (float)TILE_SIZE);
           switch(game_state.state) {
             case Debug_Draw_State::Create: {
               if (is_tile_inbounds(tile))
@@ -425,7 +420,7 @@ int main() {
 
             // * create or remove tile 
             if(game_state.tracking_projectile_index < 0) {
-              Vec2i tile = game_state.mouse_position / TILE_SIZE;
+              Vec2<int> tile = vec_cast<int>(game_state.mouse_position / (float)TILE_SIZE);
               if(is_tile_inbounds(tile)) {
                 if(level[tile.y][tile.x] == Tile::Empty) {
                   game_state.state = Debug_Draw_State::Create;
@@ -457,26 +452,25 @@ int main() {
     // * render the current state
     render_game_state(game_state, renderer, camera);
     if(debug) {
-      render_debug_overlay(game_state, renderer, camera, step_debug ? STEP_DEBUG_FPS : 1000 / prev_dt);
+      render_debug_overlay(game_state, renderer, camera);
     }
 
-    // {
-    //   Vec2i anchor = {100, 100};
-    //   float w = idle.frames[0].srcrect.w + idle.frames[0].srcrect.w * a;
-    //   float h = idle.frames[0].srcrect.h * (1.0f - a);
-    //   SDL_Rect dstrect = {(int)floorf(anchor.x - w * 0.5), (int)floorf(anchor.y - h), (int)floorf(w), (int)floorf(h)};
-    //   render_sprite(renderer, idle.frames[0], dstrect);
-    // }
+    {
+      Vec2f anchor = {100.0f, 100.0f};
+      float w = ((float)idle.frames[0].srcrect.w + (float)idle.frames[0].srcrect.w * a) * 2.0f;
+      float h = ((float)idle.frames[0].srcrect.h * (1.0f - a)) * 2.0f;
+      Rectf dstrect = {float(anchor.x - w * 0.5), anchor.y - h, w, h};
+      render_sprite(renderer, idle.frames[0], dstrect);
+    }
 
     SDL_RenderPresent(renderer);
 
     // * calculate the next state
     if(!step_debug) {
-      const Uint32 dt = SDL_GetTicks() - begin;
-      update_game_state(game_state, dt);
-      // println(stdout, 1.0f * (1.0f / dt));
+      // const Uint32 dt = SDL_GetTicks() - begin;
+      update_game_state(game_state, 1.0f / (float)STEP_DEBUG_FPS);
+      // println(stdout, 1.0f * (1.0f / dt));k
       // a = a + 1.0f * (1.0f / dt);
-      prev_dt = dt;
     }
   }
   SDL_Quit();

@@ -11,7 +11,7 @@ const int LEVEL_WIDTH = 10;
 const int LEVEL_HEIGHT = 10;
 
 // * Level Boundary
-const SDL_Rect LEVEL_BOUNDARY = {0, 0, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
+const Rectf LEVEL_BOUNDARY = {0.0f, 0.0f, LEVEL_WIDTH *TILE_SIZE, LEVEL_HEIGHT *TILE_SIZE};
 
 Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
     {Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty, Tile::Empty},
@@ -27,11 +27,11 @@ Tile level[LEVEL_HEIGHT][LEVEL_WIDTH] = {
 };
 
 static inline
-bool is_tile_inbounds(Vec2i p) {
+bool is_tile_inbounds(Vec2<int> p) {
   return 0 <= p.x && p.x < LEVEL_WIDTH && 0 <= p.y && p.y < LEVEL_HEIGHT;
 }
 
-bool is_tile_empty(Vec2i p) {
+bool is_tile_empty(Vec2<int> p) {
   return !is_tile_inbounds(p) || level[p.y][p.x] == Tile::Empty;
 }
 
@@ -43,17 +43,14 @@ void render_level(Camera camera, SDL_Renderer *renderer, Sprite top_ground_textu
           // * Do nothing
         } break;
         case Tile::Wall: {
+          const auto dstrect = rect(
+              vec_cast<float>(vec2(x, y) * TILE_SIZE) - camera.pos,
+              (float)TILE_SIZE, (float)TILE_SIZE);
           if (is_tile_empty(vec2(x, y - 1))) {
-            SDL_Rect destrect = {x * TILE_SIZE - camera.pos.x,
-                                 y * TILE_SIZE - camera.pos.y,
-                                 TILE_SIZE, TILE_SIZE};
-            render_sprite(renderer, top_ground_texture, destrect);
+            render_sprite(renderer, top_ground_texture, dstrect);
           }
           else {
-            SDL_Rect destrect = {x * TILE_SIZE - camera.pos.x,
-                                 y * TILE_SIZE - camera.pos.y,
-                                 TILE_SIZE, TILE_SIZE};
-            render_sprite(renderer, bottom_ground_texture, destrect);
+            render_sprite(renderer, bottom_ground_texture, dstrect);
           }
         }
       }

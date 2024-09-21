@@ -13,24 +13,29 @@ struct Sprite {
 void render_sprite(
     SDL_Renderer *renderer,
     Sprite texture,
-    SDL_Rect destrect,
+    Rectf destrect,
     SDL_RendererFlip flip = SDL_FLIP_NONE)
 {
-  sec(SDL_RenderCopyEx(renderer,
+
+  SDL_Rect rect = rectf_for_sdl(destrect);
+  sec(
+      SDL_RenderCopyEx(renderer,
                        texture.texture,
                        &texture.srcrect,
-                       &destrect, 0.0, nullptr, flip));
+                       &rect, 0.0, nullptr, flip));
 }
 
 void render_sprite(
     SDL_Renderer *renderer,
     Sprite texture,
-    Vec2i pos,
+    Vec2f pos,
     SDL_RendererFlip flip = SDL_FLIP_NONE)
 {
   SDL_Rect dstrect = {
-      pos.x - texture.srcrect.w / 2, pos.y - texture.srcrect.h / 2,
+      (int)floorf(pos.x - (float)texture.srcrect.w * 0.5f),
+      (int)floorf(pos.y - (float)texture.srcrect.h * 0.5f),
       texture.srcrect.w, texture.srcrect.h};
+
   sec(SDL_RenderCopyEx(renderer,
                        texture.texture,
                        &texture.srcrect,
@@ -45,14 +50,14 @@ struct Animation {
   Sprite    *frames;
   size_t    frame_count;
   size_t    frame_current;
-  uint32_t  frame_duration;
-  uint32_t  frame_cooldown;
+  float  frame_duration;
+  float  frame_cooldown;
 };
 
 static inline void render_animation(
     SDL_Renderer *renderer,
     Animation animation,
-    Vec2i pos,
+    Vec2f pos,
     SDL_RendererFlip flip = SDL_FLIP_NONE)
 {
   render_sprite(renderer,
@@ -63,7 +68,7 @@ static inline void render_animation(
 static inline void render_animation(
     SDL_Renderer *renderer,
     Animation animation,
-    SDL_Rect dstrect,
+    Rectf dstrect,
     SDL_RendererFlip flip = SDL_FLIP_NONE)
 {
   render_sprite(renderer,
@@ -72,7 +77,7 @@ static inline void render_animation(
                 flip);
 }
 
-void update_animation(Animation *animation, uint32_t dt) {
+void update_animation(Animation *animation, float dt) {
   assert(animation);
   if (dt < animation->frame_cooldown) {
     animation->frame_cooldown -= dt;
@@ -103,14 +108,14 @@ SDL_Surface *load_png_file_as_surface(const char *image_filename) {
   }
 
   SDL_Surface *image_surface = sec(SDL_CreateRGBSurfaceFrom(image_pixels,
-                                                              image.width,
-                                                              image.height,
-                                                              32,
-                                                              4 * image.width,
-                                                              0x000000ff,
-                                                              0x0000ff00,
-                                                              0x00ff0000,
-                                                              0xff000000));
+                                                            (int)image.width,
+                                                            (int)image.height,
+                                                            32,
+                                                            4 * (int)image.width,
+                                                            0x000000ff,
+                                                            0x0000ff00,
+                                                            0x00ff0000,
+                                                            0xff000000));
   return image_surface;
 }
 
@@ -155,13 +160,13 @@ SDL_Texture *spritesheet_by_name(String_View filename) {
 
 Animation load_spritesheet_animation(
     SDL_Renderer *renderer,
-    size_t frame_count,
-    uint32_t frame_duration,
+    int frame_count,
+    float frame_duration,
     const char *spritesheet_filepath)
 {
   Animation result = {};
   result.frames = new Sprite[frame_count];
-  result.frame_count = frame_count;
+  result.frame_count = (size_t)frame_count;
   result.frame_duration = frame_duration;
   SDL_Texture *spritesheet = load_texture_from_png_file(renderer, spritesheet_filepath);
   int spritesheet_w = 0;
@@ -170,7 +175,7 @@ Animation load_spritesheet_animation(
   int sprite_w = spritesheet_w / frame_count;
   int sprite_h = spritesheet_h; // * Note We only handle horizontal spritesheet
 
-  for (int i = 0; i < (int)frame_count; ++i) {
+  for (int i = 0; i < frame_count; ++i) {
     result.frames[i].srcrect = {i * sprite_w, 0, sprite_w, sprite_h};
     result.frames[i].texture = spritesheet;
   }
@@ -260,11 +265,12 @@ Animation load_animation_file(const char *animation_filepath)
       spritesheet_texture = spritesheet_by_name(value);
     }
     else if(subkey == "duration"_sv) {
-      auto result = value.as_integer<size_t>();
+      auto result = value.as_integer<int>();
       if(!result.has_value) {
         abort_parse_error(stderr, source, input, animation_filepath, "duration is not a number");   
       }
-      animation.frame_duration = result.unwrap;
+      // * converting duration to seconds
+      animation.frame_duration = (float)result.unwrap / 1000.0f;
     }
     else if(subkey == "frames"_sv) {
       // Result<size_t, void> result = as_number<size_t>(trim(chop_by_delim(&key, '.'), isspace));
